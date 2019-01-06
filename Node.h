@@ -23,8 +23,8 @@ struct Node {
 //struct for expressions, we need to know their type
 struct Expression : public Node {
     ExpType exp_type;
-
-    Expression(const ExpType exp_type) : Node(), exp_type(exp_type) {}
+    int used_register;
+    Expression(const ExpType exp_type, int used_register) : Node(), exp_type() , used_register(used_register) {}
 };
 
 //struct for structures, the extra string field is so we can now what kind of struct it is
@@ -108,6 +108,12 @@ struct FormalsList : public Node {
         //if now field with that name was found, the name is not taken
         return false;
     }
+};
+
+struct Binop : public Node {
+    std::string operation;
+    std::string operation;
+    Binop(const std::string operation) : Node(), operation(operation) {}
 };
 
 
