@@ -64,11 +64,13 @@ ExpType cur_ret_type = VOIDEXP;
 %left <node> LPAREN
 %left <node> RPAREN
 %left <node> PERIOD
-%left <node> BINOP
-%left <node> RELOP
+%right <node> NOT
 %left <node> AND
 %left <node> OR
-%right <node> NOT
+%nonassoc <node> LBRACE
+%nonassoc <node> RBRACE
+%nonassoc <node> RELOP
+%left <node> BINOP
 %nonassoc <node> TRUE
 %nonassoc <node> FALSE
 %nonassoc <node> RETURN
@@ -79,8 +81,6 @@ ExpType cur_ret_type = VOIDEXP;
 %nonassoc <node> CONTINUE
 %nonassoc <node> SC
 %nonassoc <node> COMMA
-%nonassoc <node> LBRACE
-%nonassoc <node> RBRACE
 %right <node> ASSIGN
 %nonassoc <node> VOID
 %nonassoc <identifier> ID
@@ -220,8 +220,7 @@ Statement:          OpenStatement
                     | ClosedStatement
 ;
 
-OpenStatement:      IF M1 LPAREN BoolExp RPAREN SimpleStatement M2
-                    | IF M1 LPAREN BoolExp RPAREN OpenStatement M2
+OpenStatement:      IF M1 LPAREN BoolExp RPAREN Statement M2
                     | IF M1 LPAREN BoolExp RPAREN ClosedStatement M2 ELSE M1 OpenStatement M2
                     | WHILE M1 LPAREN BoolExp RPAREN M3 OpenStatement M4 M2
 ;
