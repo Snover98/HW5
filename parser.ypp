@@ -1,0 +1,736 @@
+%{
+/*C++ lang stuff*/
+#include <iostream>
+#include <stdlib.h>
+#include "SymTable.h"
+#include <vector>
+#include "output.hpp"
+#include <string>
+#include "Node.h"
+
+extern int yylineno;
+
+//#define YYSTYPE Node*
+int yylex();
+void yyerror(const char*);
+
+//functions for enum type conversions
+ExpType varToExp(VarType t);
+VarType expToVar(ExpType e);
+
+//functions for creating new scopes
+void addEmptyScope();
+void addFuncScope(const std::string &ID, const std::vector<FormalStruct> &formals, ExpType ret_type);
+//function for removing scope
+void popScope();
+//function for type -> string conversion
+std::string typeToString(VarType type);
+//function for function -> string conversion
+std::string funcToString(FunctionType &func_type);
+//get function argument types vector as string
+std::vector<std::string> funcArgTypes(FunctionType &func_type);
+//func that adds print and printi to the symbol table
+void addPrints();
+//func that checks if an ID is already defined
+void checkID(std::string& ID);
+
+//the struct types defined in the code
+std::vector <std::vector<StructType> > structs_stack;
+//stack of symbol tables
+std::vector<SymTable> tables_stack;
+//number of conditional scopes (if/else/while) we are in, used to validate break statements
+unsigned int num_of_while_scopes = 0;
+//var for knowing what type the current function returns
+ExpType cur_ret_type = VOIDEXP;
+
+
+
+
+%}
+
+%union{
+    Node* node;
+    Expression* expression;
+    Structure* structure;
+    Identifier* identifier;
+    ExpressionList* expression_list;
+    StructMemory* struct_memory;
+    StructMemList* struct_memory_list;
+    Formal* formal;
+    FormalStruct* formal_struct;
+    FormalsList* formals_list;
+}
+
+%left <node> LPAREN
+%left <node> RPAREN
+%left <node> PERIOD
+%left <node> BINOP
+%left <node> RELOP
+%left <node> AND
+%left <node> OR
+%right <node> NOT
+%nonassoc <node> TRUE
+%nonassoc <node> FALSE
+%nonassoc <node> RETURN
+%nonassoc <node> IF
+%nonassoc <node> ELSE
+%nonassoc <node> WHILE
+%nonassoc <node> BREAK
+%nonassoc <node> CONTINUE
+%nonassoc <node> SC
+%nonassoc <node> COMMA
+%nonassoc <node> LBRACE
+%nonassoc <node> RBRACE
+%right <node> ASSIGN
+%nonassoc <node> VOID
+%nonassoc <identifier> ID
+%nonassoc <identifier> NUM
+%nonassoc <node> STRING
+%nonassoc <node> INT
+%nonassoc <node> BYTE
+%nonassoc <node> B
+%nonassoc <node> BOOL
+%nonassoc <node> STRUCT
+
+%type <expression> RetType Call Type Exp BoolExp
+%type <formals_list> FormalsList Formals
+%type <formal_struct> FormalDecl
+%type <struct_memory_list> StructMemList
+%type <struct_memory> StructMem
+%type <expression_list> ExpList
+%type <structure> StructType
+
+
+
+%%
+
+Program:            Structs Funcs {
+                                    if(!isSymInTable("main", tables_stack)){
+                                        output::errorMainMissing();
+                                        exit(0);
+                                    }
+                                    SymEntry e = getSymbolEntry("main", tables_stack);
+                                    if(e.type != FUNCTYPE || !e.func_type.first.empty() || e.func_type.second != NOTYPE){
+                                        output::errorMainMissing();
+                                        exit(0);
+                                    }
+                                    popScope();
+                                  };
+
+Funcs:              /*epsilon*/
+                    | FuncDecl Funcs
+;
+
+FuncDecl:           RetType ID {checkID($2->ID);} LPAREN Formals RPAREN {addFuncScope($2->ID, $5->formals, $1->exp_type);} LBRACE Statements RBRACE {
+                                                                                                                                     popScope();
+                                                                                                                                     cur_ret_type = VOIDEXP;
+                                                                                                                                     delete $1;
+                                                                                                                                     delete $2;
+                                                                                                                                     delete $5;
+                                                                                                                                 };
+
+Structs:            /*epsilon*/
+                    | StructsDecl Structs
+;
+
+StructsDecl:        STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC {
+                                                                structs_stack.back().push_back(StructType($2->ID, $5->fields));
+                                                                delete $2;
+                                                                delete $5;
+                                                             };
+
+RetType:            Type {$$ = $1;}
+                    | VOID {$$ = new Expression(VOIDEXP);}
+;
+
+Formals:            {$$ = new FormalsList();}
+                    | FormalsList {$$ = $1;}
+;
+
+FormalsList:        FormalDecl {
+                                    $$ = new FormalsList();
+
+                                    $$->formals.push_back(*$1);
+
+                                    delete $1;
+                               }
+                    | FormalDecl COMMA FormalsList {
+                                                        $$ = $3;
+
+                                                        if($3->isParamNameTaken($1->ID)){
+                                                            output::errorDef(yylineno, $1->ID);
+                                                            exit(0);
+                                                        }
+
+                                                        $$->formals.insert($$->formals.begin(), *$1);
+
+                                                        delete $1;
+                                                   }
+;
+
+FormalDecl:         Type ID {
+                                if(isSymInTable($2->ID, tables_stack) || isStructTypeInTable(structs_stack, $2->ID)){
+                                    output::errorDef(yylineno, $2->ID);
+                                    exit(0);
+                                }
+                                $$ = new FormalStruct($2->ID, $1->exp_type);
+
+                                delete $1;
+                                delete $2;
+							}
+
+                    | StructType ID {
+                                        if(isSymInTable($2->ID, tables_stack) || isStructTypeInTable(structs_stack, $2->ID)){
+                                            output::errorDef(yylineno, $2->ID);
+                                            exit(0);
+                                        }
+                                        $$ = new FormalStruct($2->ID, $1->struct_type);
+                                        delete $1;
+                                        delete $2;
+                                    }
+;
+
+StructMemList:      StructMem {
+                                $$ = new StructMemList();
+                                $$->fields.push_back($1->field);
+                                delete $1;
+                              }
+                    | StructMem StructMemList {
+                                                $$ = $2;
+                                                if($$->isFieldNameTaken($1->field.first)){
+                                                    output::errorDef($2->fieldLocation($1->field.first)+$1->line, $1->field.first);
+                                                    exit(0);
+                                                }
+                                                $$->fields.insert($$->fields.begin(), $1->field);
+                                                delete $1;
+                                              }
+;
+
+StructMem:          Type ID SC {
+                                    $$ = new StructMemory($2->ID, expToVar($1->exp_type), yylineno);
+                                    delete $1;
+                                    delete $2;
+                               };
+
+Statements:         Statement
+                    | Statements Statement
+;
+
+Statement:          OpenStatement
+                    | ClosedStatement
+;
+
+OpenStatement:      IF M1 LPAREN BoolExp RPAREN SimpleStatement M2
+                    | IF M1 LPAREN BoolExp RPAREN OpenStatement M2
+                    | IF M1 LPAREN BoolExp RPAREN ClosedStatement M2 ELSE M1 OpenStatement M2
+                    | WHILE M1 LPAREN BoolExp RPAREN M3 OpenStatement M4 M2
+;
+
+ClosedStatement:    SimpleStatement
+                    | IF M1 LPAREN BoolExp RPAREN ClosedStatement M2 ELSE M1 ClosedStatement M2
+                    | WHILE M1 LPAREN BoolExp RPAREN M3 ClosedStatement M4 M2
+;
+
+SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
+                    | Type ID SC {
+                                    checkID($2->ID);
+                                    tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
+                                    delete $1;
+                                    delete $2;
+                                 }
+                    | StructType ID SC {
+                                        checkID($2->ID);
+                                        tables_stack.back().addEntry($2->ID, $1->struct_type);
+                                        delete $1;
+                                        delete $2;
+                                       }
+                    | STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC {
+                                                                                    structs_stack.back().push_back(StructType($2->ID, $5->fields));
+                                                                                    delete $2;
+                                                                                    delete $5;
+                                                                                  }
+                    | Type ID ASSIGN Exp SC {
+                                                checkID($2->ID);
+                                                if(!isLegalExpType($4, $1)){
+                                                    output::errorMismatch(yylineno);
+                                                    exit(0);
+                                                }
+                                                tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
+                                                delete $1;
+                                                delete $2;
+                                                delete $4;
+                                            }
+                    | StructType ID ASSIGN Exp SC {
+                                                    checkID($2->ID);
+                                                    if(!isLegalExpType($4, $1)){
+                                                        output::errorMismatch(yylineno);
+                                                        exit(0);
+                                                    }
+                                                    tables_stack.back().addEntry($2->ID, $1->struct_type);
+                                                    delete $1;
+                                                    delete $2;
+                                                    delete $4;
+                                                  }
+                    | ID ASSIGN Exp SC {
+                                            SymEntry e = getSymbolEntry($1->ID, tables_stack);
+                                            if(!isSymInTable($1->ID, tables_stack) || !e.isVariable()){
+                                                output::errorUndef(yylineno, $1->ID);
+                                                exit(0);
+                                            }
+                                            if(e.type == STRUCTTYPE){
+                                                if(!isLegalExpType($3, e.struct_type)){
+                                                    output::errorMismatch(yylineno);
+                                                    exit(0);
+                                                }
+                                            } else {
+                                                if(!isLegalExpType($3, varToExp(e.type))){
+                                                    output::errorMismatch(yylineno);
+                                                    exit(0);
+                                                }
+                                            }
+                                            delete $1;
+                                            delete $3;
+                                       }
+                    | ID PERIOD ID ASSIGN Exp SC {
+                                                    SymEntry e = getSymbolEntry($1->ID, tables_stack);
+                                                    if(!isSymInTable($1->ID, tables_stack) || !e.isVariable()){
+                                                        output::errorUndef(yylineno, $1->ID);
+                                                        exit(0);
+                                                    }
+                                                    if(e.type != STRUCTTYPE){
+                                                        output::errorMismatch(yylineno);
+                                                        exit(0);
+                                                    }
+                                                    if(!isStructTypeInTable(structs_stack, e.struct_type)){
+                                                        output::errorUndefStruct(yylineno, e.struct_type);
+                                                        exit(0);
+                                                    }
+                                                    StructType t = getStructTypeEntry(structs_stack, e.struct_type);
+                                                    VarType field_type = t.getFieldType($3->ID);
+                                                    if(field_type == NOTYPE){
+                                                        output::errorUndefStructMember(yylineno, $1->ID);
+                                                        exit(0);
+                                                    }
+                                                    if(!isLegalExpType($5, varToExp(field_type))){
+                                                        output::errorMismatch(yylineno);
+                                                        exit(0);
+                                                    }
+                                                    delete $1;
+                                                    delete $3;
+                                                    delete $5;
+                                                 }
+                    | Call SC
+                    | RETURN SC {
+                                    if(cur_ret_type != VOIDEXP){
+                                        output::errorMismatch(yylineno);
+                                        exit(0);
+                                    }
+                                }
+                    | RETURN Exp SC {
+                                        if(!isLegalExpType($2, cur_ret_type)){
+                                            output::errorMismatch(yylineno);
+                                            exit(0);
+                                        }
+                                        delete $2;
+                                    }
+                    | BREAK SC {
+                                if(num_of_while_scopes == 0){
+                                    output::errorUnexpectedBreak(yylineno);
+                                    exit(0);
+                                }
+                               }
+                    | CONTINUE SC {
+                                    if(num_of_while_scopes == 0){
+                                        output::errorUnexpectedContinue(yylineno);
+                                        exit(0);
+                                    }
+                                  }
+;
+
+Call:               ID LPAREN ExpList RPAREN {
+                                                    SymEntry func_e = getSymbolEntry($1->ID, tables_stack);
+                                                    if(!isSymInTable($1->ID, tables_stack) || func_e.type != FUNCTYPE){
+                                                        output::errorUndefFunc(yylineno, $1->ID);
+                                                        exit(0);
+                                                    }
+                                                    if($3->expressions.size() != func_e.func_type.first.size()){
+                                                        std::vector<std::string> arg_t = funcArgTypes(func_e.func_type);
+                                                        output::errorPrototypeMismatch(yylineno, $1->ID, arg_t);
+                                                        exit(0);
+                                                    }
+
+                                                    std::vector<Structure>::iterator it_exp =  $3->expressions.begin();
+                                                    std::vector<FuncParam>::iterator it_arg =  func_e.func_type.first.begin();
+                                                    for(; it_exp != $3->expressions.end() && it_arg != func_e.func_type.first.end(); ++it_exp){
+                                                        bool is_legal = true;
+                                                        if((*it_arg).type != STRUCTTYPE || (*it_exp).exp_type != STRUCTEXP){
+                                                            is_legal = isLegalExpType((*it_exp).exp_type, varToExp((*it_arg).type));
+                                                        } else {
+                                                            is_legal = isLegalExpType((*it_exp).struct_type, (*it_arg).struct_type);
+                                                        }
+
+                                                        if(!is_legal){
+                                                            std::vector<std::string> arg_t = funcArgTypes(func_e.func_type);
+                                                            output::errorPrototypeMismatch(yylineno, $1->ID, arg_t);
+                                                            exit(0);
+                                                        }
+                                                        ++it_arg;
+                                                    }
+
+                                                    $$ = new Expression(varToExp(func_e.func_type.second));
+                                                    delete $1;
+                                                    delete $3;
+                                             }
+                    | ID LPAREN RPAREN {
+                                            SymEntry func_e = getSymbolEntry($1->ID, tables_stack);
+                                            if(!isSymInTable($1->ID, tables_stack) || func_e.type != FUNCTYPE){
+                                                output::errorUndefFunc(yylineno, $1->ID);
+                                                exit(0);
+                                            }
+                                            if(!func_e.func_type.first.empty()){
+                                                std::vector<std::string> arg_t = funcArgTypes(func_e.func_type);
+                                                output::errorPrototypeMismatch(yylineno, $1->ID, arg_t);
+                                                exit(0);
+                                            }
+
+                                            $$ = new Expression(varToExp(func_e.func_type.second));
+                                            delete $1;
+                                       }
+;
+
+ExpList:            Exp {
+                            $$ = new ExpressionList();
+                            $$->expressions.push_back(expressionToList($1));
+                            delete $1;
+                        }
+                    | Exp COMMA ExpList {
+                                            $$ = $3;
+                                            $$->expressions.insert($$->expressions.begin(), expressionToList($1));
+                                            delete $1;
+                                        }
+;
+
+Type:               INT {$$ = new Expression(INTEXP);}
+                    | BYTE {$$ = new Expression(BYTEEXP);}
+                    | BOOL {$$ = new Expression(BOOLEXP);}
+;
+
+StructType:         STRUCT ID {
+                        if(!isStructTypeInTable(structs_stack, $2->ID)){
+                            output::errorUndefStruct(yylineno, $2->ID);
+                            exit(0);
+                        }
+                        $$ = new Structure($2->ID);
+                        delete $2;
+                    };
+
+Exp:                LPAREN Exp RPAREN {$$ = $2;}
+                    | Exp BINOP Exp {
+                                        if(!isNumExp($1) || !isNumExp($3)){
+                                            output::errorMismatch(yylineno);
+                                            exit(0);
+                                        }
+                                        $$ = new Expression(operatorType($1, $3));
+                                        delete $1;
+                                        delete $3;
+                                    }
+                    | ID {
+                            SymEntry e = getSymbolEntry($1->ID, tables_stack);
+                            if(!isSymInTable($1->ID, tables_stack) || !e.isVariable()){
+                                output::errorUndef(yylineno, $1->ID);
+                                exit(0);
+                            }
+                            if(e.type == STRUCTTYPE){
+                                $$ = new Structure(e.struct_type);
+                            } else {
+                                $$ = new Expression(varToExp(e.type));
+                            }
+                            delete $1;
+                         }
+                    | ID PERIOD ID {
+                                        SymEntry e = getSymbolEntry($1->ID, tables_stack);
+                                        if(!isSymInTable($1->ID, tables_stack) || !e.isVariable()){
+                                            output::errorUndef(yylineno, $1->ID);
+                                            exit(0);
+                                        }
+                                        if(e.type != STRUCTTYPE){
+                                            output::errorMismatch(yylineno);
+                                            exit(0);
+                                        }
+                                        if(!isStructTypeInTable(structs_stack, e.struct_type)){
+                                            output::errorUndefStruct(yylineno, e.struct_type);
+                                            exit(0);
+                                        }
+                                        StructType t = getStructTypeEntry(structs_stack, e.struct_type);
+                                        VarType field_type = t.getFieldType($3->ID);
+                                        if(field_type == NOTYPE){
+                                            output::errorUndefStructMember(yylineno, $1->ID);
+                                            exit(0);
+                                        }
+                                        $$ = new Expression(varToExp(field_type));
+                                        delete $1;
+                                        delete $3;
+                                   }
+                    | Call {$$ = $1;}
+                    | NUM {
+                            $$ = new Expression(INTEXP);
+                            delete $1;
+                          }
+                    | NUM B {
+                                if(strtol($1->ID.c_str(), NULL, 10) > 255){
+                                    output::errorByteTooLarge(yylineno, $1->ID);
+                                    exit(0);
+                                }
+                                $$ = new Expression(BYTEEXP);
+                                delete $1;
+                            }
+                    | STRING {$$ = new Expression(STRINGEXP);}
+                    | TRUE {$$ = new Expression(BOOLEXP);}
+                    | FALSE {$$ = new Expression(BOOLEXP);}
+                    | NOT Exp {
+                                if($2->exp_type != BOOLEXP){
+                                    output::errorMismatch(yylineno);
+                                    exit(0);
+                                }
+                                $$ = new Expression(BOOLEXP);
+                                delete $2;
+                              }
+                    | Exp AND Exp {
+                                    if($1->exp_type != BOOLEXP || $3->exp_type != BOOLEXP){
+                                        output::errorMismatch(yylineno);
+                                        exit(0);
+                                    }
+                                    $$ = new Expression(BOOLEXP);
+                                    delete $1;
+                                    delete $3;
+                                  }
+                    | Exp OR Exp {
+                                    if($1->exp_type != BOOLEXP || $3->exp_type != BOOLEXP){
+                                        output::errorMismatch(yylineno);
+                                        exit(0);
+                                    }
+                                    $$ = new Expression(BOOLEXP);
+                                    delete $1;
+                                    delete $3;
+                                 }
+                    | Exp RELOP Exp {
+                                        if(!isNumExp($1) || !isNumExp($3)){
+                                            output::errorMismatch(yylineno);
+                                            exit(0);
+                                        }
+                                        $$ = new Expression(BOOLEXP);
+                                        delete $1;
+                                        delete $3;
+                                    }
+;
+
+BoolExp:            Exp {
+                            if(!isLegalExpType($1, BOOLEXP)){
+                                output::errorMismatch(yylineno);
+                                exit(0);
+                            }
+                        }
+
+;
+
+M1:                 {addEmptyScope();}
+;
+
+M2:                 {popScope();}
+;
+
+M3:                  {++num_of_while_scopes;}
+;
+
+M4:                 {--num_of_while_scopes;}
+;
+
+%%
+
+ExpType varToExp(VarType t){
+    switch(t){
+        case INTTYPE:
+            return INTEXP;
+        case BYTETYPE:
+            return BYTEEXP;
+        case BOOLTYPE:
+            return BOOLEXP;
+        case STRUCTTYPE:
+            return STRUCTEXP;
+        case FUNCTYPE:
+            return FUNCEXP;
+        case STRINGTYPE:
+            return STRINGEXP;
+        default:
+            //note that no entry in the symbol table can be string or void!
+            return VOIDEXP;
+    }
+}
+
+VarType expToVar(ExpType e){
+    switch(e){
+        case INTEXP:
+            return INTTYPE;
+        case BYTEEXP:
+            return BYTETYPE;
+        case BOOLEXP:
+            return BOOLTYPE;
+        case STRUCTEXP:
+            return STRUCTTYPE;
+        case FUNCEXP:
+            return FUNCTYPE;
+        case STRINGEXP:
+            return STRINGTYPE;
+        default:
+            //note that no entry in the symbol table can be string or void!
+            return NOTYPE;
+    }
+}
+
+
+void addEmptyScope(){
+    SymTable t = SymTable(&structs_stack, tables_stack.back().nextOffset());
+    tables_stack.push_back(t);
+    structs_stack.push_back(std::vector<StructType>());
+}
+
+void addFuncScope(const std::string &ID, const std::vector<FormalStruct> &formals, ExpType ret_type){
+    cur_ret_type = ret_type;
+
+    std::vector<FuncParam> func_params = std::vector<FuncParam>();
+
+    for(std::vector<FormalStruct>::const_iterator it = formals.begin(); it!=formals.end(); ++it){
+        if((*it).type == STRUCTEXP){
+            func_params.push_back(FuncParam((*it).struct_type));
+        } else {
+            func_params.push_back(FuncParam(expToVar((*it).type)));
+        }
+    }
+
+    tables_stack.back().addEntry(ID, func_params, expToVar(ret_type));
+
+    addEmptyScope();
+
+    int offset = 0;
+    for(std::vector<FormalStruct>::const_iterator it = formals.begin(); it!=formals.end(); ++it){
+        SymEntry* e;
+
+        if((*it).type == STRUCTEXP){
+            offset -= tables_stack.back().structTypeOffset((*it).struct_type);
+            e = new SymEntry((*it).ID, (*it).struct_type, offset);
+        } else {
+            e = new SymEntry((*it).ID, expToVar((*it).type), --offset);
+        }
+
+        tables_stack.back().addEntry(*e);
+        delete e;
+    }
+}
+
+std::string typeToString(VarType type){
+    switch(type){
+        case INTTYPE:
+            return "INT";
+        case BYTETYPE:
+            return "BYTE";
+        case BOOLTYPE:
+            return "BOOL";
+        case STRUCTTYPE:
+            return "struct";
+        case STRINGTYPE:
+            return "STRING";
+        default:
+            return "VOID";
+    }
+}
+
+std::vector<std::string> funcArgTypes(FunctionType &func_type){
+    std::vector<std::string> argTypes = vector<std::string>();
+
+    for(std::vector<FuncParam>::iterator it = func_type.first.begin(); it != func_type.first.end(); ++it){
+        argTypes.push_back(typeToString((*it).type) + (((*it).type == STRUCTTYPE) ? (" " + (*it).struct_type) : ""));
+    }
+
+    return argTypes;
+}
+
+std::string funcToString(FunctionType &func_type){
+    std::string t = typeToString(func_type.second);
+    std::vector<std::string> func_args = funcArgTypes(func_type);
+    return output::makeFunctionType(t, func_args);
+}
+
+
+
+void popScope(){
+    std::vector<SymEntry> scope_entries = tables_stack.back().scope_entries;
+
+    output::endScope();
+
+    for(std::vector<SymEntry>::iterator it = scope_entries.begin(); it != scope_entries.end(); ++it){
+        std::string type;
+
+        if((*it).type == FUNCTYPE){
+            type = funcToString((*it).func_type);
+        } else{
+            type = typeToString((*it).type) + (((*it).type == STRUCTTYPE) ? (" " + (*it).struct_type) : "");
+        }
+
+        output::printID((*it).ID, (*it).offset, type);
+    }
+
+    std::vector<StructType> scope_structs = structs_stack.back();
+
+    for(std::vector<StructType>::iterator it = scope_structs.begin(); it != scope_structs.end(); ++it){
+        vector<std::string> memTypes = vector<std::string>();
+        vector<std::string> memNames = vector<std::string>();
+
+        for(StructFieldsType::const_iterator field_it = (*it).fields.begin(); field_it != (*it).fields.end(); ++field_it){
+            memTypes.push_back(typeToString((*field_it).second));
+            memNames.push_back((*field_it).first);
+        }
+
+        output::printStructType((*it).type_name, memTypes, memNames);
+    }
+
+    tables_stack.pop_back();
+    structs_stack.pop_back();
+}
+
+void addPrints(){
+    std::vector<FuncParam> print_func_params = std::vector<FuncParam>();
+    std::vector<FuncParam> printi_func_params = std::vector<FuncParam>();
+
+    print_func_params.push_back(FuncParam(STRINGTYPE));
+    printi_func_params.push_back(FuncParam(INTTYPE));
+
+    tables_stack.back().addEntry("print", print_func_params, NOTYPE);
+    tables_stack.back().addEntry("printi", printi_func_params, NOTYPE);
+}
+
+int main(){
+    structs_stack = std::vector <std::vector<StructType> >();
+    structs_stack.push_back(std::vector<StructType>());
+
+    tables_stack = std::vector<SymTable>();
+    tables_stack.push_back(SymTable(&structs_stack));
+
+    addPrints();
+
+
+
+
+    return yyparse();
+}
+
+void yyerror(const char*){
+    output::errorSyn(yylineno);
+    exit(0);
+}
+
+void checkID(std::string& ID){
+    if(isStructTypeInTable(structs_stack, ID) || isSymInTable(ID, tables_stack)){
+        output::errorDef(yylineno, ID);
+        exit(0);
+    }
+}
