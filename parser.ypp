@@ -448,7 +448,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                         if(operation == "div"){
                                         //TODO: check if not divide by 0
                                         }
-                                            $$->used_register = $1->used_register;
+                                        $$->used_register = $1->used_register;
                                         CodeBuffer::instance().emit(operation+" $"+($1->used_register+8)+",$"+($1->used_register+8)+",$"+($3->used_register+8));
                                         freeRegister($3->used_register);
                                         delete $1;
@@ -494,6 +494,12 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                     | Call {$$ = $1;}
                     | NUM {
                             $$ = new Expression(INTEXP);
+							$$->used_register = getAvailableRegister();
+							//converting int to strint - found online
+							ostringstream str1; 
+							str1 << $1->value; 
+							string num_as_string = str1.str(); 
+							CodeBuffer::instance().emit("li $"+($$->used_register+8)","+num_as_string);
                             delete $1;
                           }
                     | NUM B {
@@ -502,9 +508,20 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                     exit(0);
                                 }
                                 $$ = new Expression(BYTEEXP);
+								$$->used_register = getAvailableRegister();
+								//converting int to strint - found online
+								ostringstream str1; 
+								str1 << $1->value; 
+								string num_as_string = str1.str(); 
+								CodeBuffer::instance().emit("li $"+($$->used_register+8)","+num_as_string);
+								if($1->value<0){
+									//TODO: make sure the number is unsigned
+								}
                                 delete $1;
                             }
-                    | STRING {$$ = new Expression(STRINGEXP);}
+                    | STRING{
+								$$ = new Expression(STRINGEXP);
+							}
                     | TRUE {$$ = new Expression(BOOLEXP);}
                     | FALSE {$$ = new Expression(BOOLEXP);}
                     | NOT Exp {
@@ -772,4 +789,8 @@ void freeRegister (int i){
         return;
     }
     availableRegisters[i]=false;
+}
+
+
+
 }

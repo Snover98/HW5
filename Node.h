@@ -112,8 +112,12 @@ struct FormalsList : public Node {
 
 struct Binop : public Node {
     std::string operation;
-    std::string operation;
     Binop(const std::string operation) : Node(), operation(operation) {}
+};
+
+struct NUM : public Node{
+    int value;
+    NUM (const int value) : Node(), value(value) {}
 };
 
 
