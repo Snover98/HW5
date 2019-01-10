@@ -522,14 +522,22 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                     | STRING{
 								$$ = new Expression(STRINGEXP);
 							}
-                    | TRUE {$$ = new Expression(BOOLEXP);}
-                    | FALSE {$$ = new Expression(BOOLEXP);}
+                    | TRUE  {
+								$$ = new Expression(BOOLEXP);
+								$$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+							}
+                    | FALSE {
+								$$ = new Expression(BOOLEXP);
+								$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+							}
                     | NOT Exp {
                                 if($2->exp_type != BOOLEXP){
                                     output::errorMismatch(yylineno);
                                     exit(0);
                                 }
                                 $$ = new Expression(BOOLEXP);
+								$$->truelist=$$->falselist;
+								$$->falselist=$$->truelist;
                                 delete $2;
                               }
                     | Exp AND Exp {
@@ -538,6 +546,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                         exit(0);
                                     }
                                     $$ = new Expression(BOOLEXP);
+									
                                     delete $1;
                                     delete $3;
                                   }

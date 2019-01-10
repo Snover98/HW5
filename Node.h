@@ -24,7 +24,9 @@ struct Node {
 struct Expression : public Node {
     ExpType exp_type;
     int used_register;
-    Expression(const ExpType exp_type, int used_register) : Node(), exp_type() , used_register(used_register) {}
+    std::vector<int> truelist;
+    std::vector<int> falselist;
+    Expression(const ExpType exp_type, int used_register) : Node(), exp_type() , used_register(used_register), truelist(), falselist() {}
 };
 
 //struct for structures, the extra string field is so we can now what kind of struct it is
