@@ -1,6 +1,7 @@
 %{
 /*C++ lang stuff*/
 #include <iostream>
+#include <sstream>
 #include <stdlib.h>
 #include "SymTable.h"
 #include <vector>
@@ -69,7 +70,7 @@ string numToString(int num);
     FormalStruct* formal_struct;
     FormalsList* formals_list;
 	Binop* binop;
-	NUM* num;
+	Num* num;
 }
 
 %left <node> LPAREN
@@ -81,7 +82,7 @@ string numToString(int num);
 %nonassoc <node> LBRACE
 %nonassoc <node> RBRACE
 %nonassoc <node> RELOP
-%left <node> BINOP
+%left <binop> BINOP
 %nonassoc <node> TRUE
 %nonassoc <node> FALSE
 %nonassoc <node> RETURN
@@ -95,7 +96,7 @@ string numToString(int num);
 %right <node> ASSIGN
 %nonassoc <node> VOID
 %nonassoc <identifier> ID
-%nonassoc <identifier> NUM
+%nonassoc <num> NUM
 %nonassoc <node> STRING
 %nonassoc <node> INT
 %nonassoc <node> BYTE
@@ -457,13 +458,11 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                         }
                                         $$ = new Expression((operatorType($1, $3)),$1->used_register);
                                         string operation;
-                                        switch ((Binop*)$2->operation){
-                                            case "+": operation="addu";
-                                            case "-": operation="subu";
-                                            case "*": operation="mul";
-                                            case "/": operation="div";
-                                            default: ;//ERROR ;
-                                        }
+                                        if (($2->operation)=="+") operation="addu";
+										else if (($2->operation)=="-") operation="subu";
+										else if (($2->operation)=="*") operation="mul";
+										else if (($2->operation)=="/") operation="div";
+										else ; //ERROR shouldn't get here
                                         if(operation == "div"){
                                         //TODO: check if not divide by 0
                                         }
@@ -490,9 +489,10 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 								//TODO: check if the stack use is correct
 								int reg=getAvailableRegister();
 								string reg_as_string =numToString(reg+8);
-								string offest = numToString($1->offset);
+								int offset; //TODO: get ID's offest in the stack
+								string offset_str = numToString(offset);
 								CodeBuffer::instance().emit("addu $"+reg_as_string+",$"+reg_as_string+",$fp");
-								CodeBuffer::instance().emit("lw $"+reg_as_string+","+offest);
+								CodeBuffer::instance().emit("lw $"+reg_as_string+","+offset_str);
 								$$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
 								$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("beq $0, $" + reg_as_string + ","));
 								freeRegister(reg);
@@ -501,9 +501,10 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 							else{
 								$$->used_register = getAvailableRegister();
 								string reg=numToString($$->used_register+8);
-								string offest = numToString($1->offset);
+								int offset; //TODO: get ID's offest in the stack
+								string offset_str = numToString(offset);
 								CodeBuffer::instance().emit("addu $"+reg+",$"+reg+",$fp");
-								CodeBuffer::instance().emit("lw $"+reg+","+offest);
+								CodeBuffer::instance().emit("lw $"+reg+","+offset_str);
 							}
                             delete $1;
                          }
@@ -541,13 +542,14 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                             delete $1;
                           }
                     | NUM B {
-                                if(strtol($1->ID.c_str(), NULL, 10) > 255){
-                                    output::errorByteTooLarge(yylineno, $1->ID);
+								string val_str = numToString ($1->value);
+                                if(strtol(val_str.c_str(), NULL, 10) > 255){
+                                    output::errorByteTooLarge(yylineno, val_str);
                                     exit(0);
                                 }
 								$$ = new Expression(INTEXP,getAvailableRegister());
 								string reg=numToString($$->used_register+8);
-								CodeBuffer::instance().emit("li $"+reg+","+numToString($1->value);
+								CodeBuffer::instance().emit("li $"+reg+","+numToString($1->value));
 								if($1->value<0){
 									//TODO: make sure the number is unsigned
 								}

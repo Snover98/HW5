@@ -117,9 +117,9 @@ struct Binop : public Node {
     Binop(const std::string operation) : Node(), operation(operation) {}
 };
 
-struct NUM : public Node{
+struct Num : public Node{
     int value;
-    NUM (const int value) : Node(), value(value) {}
+    Num (const int value) : Node(), value(value) {}
 };
 
 
