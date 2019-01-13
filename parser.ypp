@@ -838,7 +838,7 @@ void freeRegister (int i){
 }
 
 //converting int to strint - found online
-string intToString (int num){
+string numToString (int num){
 	stringstream str1; 
 	str1 << num; 
 	string num_as_string = str1.str();
