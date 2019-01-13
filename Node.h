@@ -26,15 +26,15 @@ struct Expression : public Node {
     int used_register;
     std::vector<int> truelist;
     std::vector<int> falselist;
-    Expression(const ExpType exp_type, int used_register) : Node(), exp_type() , used_register(used_register), truelist(), falselist() {}
+    Expression(const ExpType exp_type, int used_register) : Node(), exp_type(exp_type) , used_register(used_register), truelist(), falselist() {}
 };
 
-//struct for structures, the extra string field is so we can now what kind of struct it is
+//struct for structures, string field is so we can know what kind of struct it is
 struct Structure : public Expression {
     std::string struct_type;
 
-    Structure(const ExpType exp_type) : Expression(exp_type), struct_type(std::string("")){}
-    Structure(const std::string &struct_type) : Expression(STRUCTEXP), struct_type(std::string(struct_type)) {}
+    Structure(const ExpType exp_type ) : Expression(exp_type,-1), struct_type(std::string("")){}
+    Structure(const std::string &struct_type ) : Expression(STRUCTEXP,-1), struct_type(std::string(struct_type)) {}
 };
 
 //used when there is an identifier read by lex, only used to create the relevant Expression and than deleted

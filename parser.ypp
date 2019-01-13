@@ -68,6 +68,8 @@ string numToString(int num);
     Formal* formal;
     FormalStruct* formal_struct;
     FormalsList* formals_list;
+	Binop* binop;
+	NUM* num;
 }
 
 %left <node> LPAREN
@@ -149,7 +151,10 @@ StructsDecl:        STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC 
                                                              };
 
 RetType:            Type {$$ = $1;}
-                    | VOID {$$ = new Expression(VOIDEXP);}
+                    | VOID {
+									int reg=getAvailableRegister();
+									$$ = new Expression(VOIDEXP,reg);
+						   }
 ;
 
 Formals:            {$$ = new FormalsList();}
@@ -384,8 +389,9 @@ Call:               ID LPAREN ExpList RPAREN {
                                                         }
                                                         ++it_arg;
                                                     }
-
-                                                    $$ = new Expression(varToExp(func_e.func_type.second));
+													
+													int reg=getAvailableRegister();
+                                                    $$ = new Expression((varToExp(func_e.func_type.second)),reg);
                                                     delete $1;
                                                     delete $3;
                                              }
@@ -401,7 +407,8 @@ Call:               ID LPAREN ExpList RPAREN {
                                                 exit(0);
                                             }
 
-                                            $$ = new Expression(varToExp(func_e.func_type.second));
+                                            int reg=getAvailableRegister();
+											$$ = new Expression((varToExp(func_e.func_type.second)),reg);
                                             delete $1;
                                        }
 ;
@@ -418,9 +425,19 @@ ExpList:            Exp {
                                         }
 ;
 
-Type:               INT {$$ = new Expression(INTEXP);}
-                    | BYTE {$$ = new Expression(BYTEEXP);}
-                    | BOOL {$$ = new Expression(BOOLEXP);}
+Type:               INT {
+							int reg=getAvailableRegister();
+							$$ = new Expression(INTEXP,reg);
+						}
+                    | BYTE 
+						{
+							int reg=getAvailableRegister();
+							$$ = new Expression(BYTEEXP,reg);
+						}
+                    | BOOL {
+							int reg=getAvailableRegister();
+							$$ = new Expression(BOOLEXP,reg);
+							}
 ;
 
 StructType:         STRUCT ID {
@@ -438,19 +455,18 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                             output::errorMismatch(yylineno);
                                             exit(0);
                                         }
-                                        $$ = new Expression(operatorType($1, $3));
+                                        $$ = new Expression((operatorType($1, $3)),$1->used_register);
                                         string operation;
-                                        switch ($2->operation){
+                                        switch ((Binop*)$2->operation){
                                             case "+": operation="addu";
                                             case "-": operation="subu";
                                             case "*": operation="mul";
                                             case "/": operation="div";
-                                            default: //ERROR ;
+                                            default: ;//ERROR ;
                                         }
                                         if(operation == "div"){
                                         //TODO: check if not divide by 0
                                         }
-                                        $$->used_register = $1->used_register;
 										string reg1=numToString($1->used_register+8);
 										string reg2=numToString($3->used_register+8);
                                         CodeBuffer::instance().emit(operation+" $"+reg1+",$"+reg1+",$"+reg2);
@@ -467,14 +483,14 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                             if(e.type == STRUCTTYPE){
                                 $$ = new Structure(e.struct_type);
                             } else {
-                                $$ = new Expression(varToExp(e.type));
+                                $$ = new Expression((varToExp(e.type)),-1);
                             }
 							//check if this is a boolean expression 
 							if ($$->exp_type==BOOLEXP){
 								//TODO: check if the stack use is correct
 								int reg=getAvailableRegister();
 								string reg_as_string =numToString(reg+8);
-								string offest = numToString($1->offset;);
+								string offest = numToString($1->offset);
 								CodeBuffer::instance().emit("addu $"+reg_as_string+",$"+reg_as_string+",$fp");
 								CodeBuffer::instance().emit("lw $"+reg_as_string+","+offest);
 								$$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
@@ -484,8 +500,8 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 							//if it isn't a boolean expression then just save the value in a register;
 							else{
 								$$->used_register = getAvailableRegister();
-								stringstream reg=numToString($$->used_register+8);
-								string offest = numToString($1->offset;);
+								string reg=numToString($$->used_register+8);
+								string offest = numToString($1->offset);
 								CodeBuffer::instance().emit("addu $"+reg+",$"+reg+",$fp");
 								CodeBuffer::instance().emit("lw $"+reg+","+offest);
 							}
@@ -511,14 +527,14 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                             output::errorUndefStructMember(yylineno, $1->ID);
                                             exit(0);
                                         }
-                                        $$ = new Expression(varToExp(field_type));
+										int reg = getAvailableRegister();
+                                        $$ = new Expression((varToExp(field_type)),reg);
                                         delete $1;
                                         delete $3;
                                    }
                     | Call {$$ = $1;}
                     | NUM {
-                            $$ = new Expression(INTEXP);
-							$$->used_register = getAvailableRegister();
+                            $$ = new Expression(INTEXP,getAvailableRegister());
 							string num_as_string = numToString($1->value);
 							string reg =numToString($$->used_register+8);
 							CodeBuffer::instance().emit("li $"+reg+","+num_as_string);
@@ -529,8 +545,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                     output::errorByteTooLarge(yylineno, $1->ID);
                                     exit(0);
                                 }
-                                $$ = new Expression(BYTEEXP);
-								$$->used_register = getAvailableRegister();
+								$$ = new Expression(INTEXP,getAvailableRegister());
 								string reg=numToString($$->used_register+8);
 								CodeBuffer::instance().emit("li $"+reg+","+numToString($1->value);
 								if($1->value<0){
@@ -538,15 +553,16 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 								}
                                 delete $1;
                             }
-                    | STRING{
-								$$ = new Expression(STRINGEXP);
+                    | STRING{                          
+
+								$$ = new Expression(STRINGEXP,getAvailableRegister());
 							}
                     | TRUE  {
-								$$ = new Expression(BOOLEXP);
+								$$ = new Expression(BOOLEXP,-1);
 								$$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
 							}
                     | FALSE {
-								$$ = new Expression(BOOLEXP);
+								$$ = new Expression(BOOLEXP,-1);
 								$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
 							}
                     | NOT Exp {
@@ -554,7 +570,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                     output::errorMismatch(yylineno);
                                     exit(0);
                                 }
-                                $$ = new Expression(BOOLEXP);
+                                $$ = new Expression(BOOLEXP,-1);
 								$$->truelist=$$->falselist;
 								$$->falselist=$$->truelist;
                                 delete $2;
@@ -564,7 +580,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                         output::errorMismatch(yylineno);
                                         exit(0);
                                     }
-                                    $$ = new Expression(BOOLEXP);
+                                    $$ = new Expression(BOOLEXP,-1);
 									
                                     delete $1;
                                     delete $3;
@@ -574,7 +590,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                         output::errorMismatch(yylineno);
                                         exit(0);
                                     }
-                                    $$ = new Expression(BOOLEXP);
+                                    $$ = new Expression(BOOLEXP,-1);
                                     delete $1;
                                     delete $3;
                                  }
@@ -583,7 +599,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                             output::errorMismatch(yylineno);
                                             exit(0);
                                         }
-                                        $$ = new Expression(BOOLEXP);
+                                        $$ = new Expression(BOOLEXP,-1);
                                         delete $1;
                                         delete $3;
                                     }
@@ -821,9 +837,8 @@ void freeRegister (int i){
 
 //converting int to strint - found online
 string intToString (int num){
-	ostringstream str1; 
+	stringstream str1; 
 	str1 << num; 
 	string num_as_string = str1.str();
 	return num_as_string;
-}
 }
