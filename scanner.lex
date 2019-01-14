@@ -66,7 +66,10 @@ continue							return CONTINUE;
 
 (==)|(!=)|(<)|(>)|(<=)|(>=)			return RELOP;
 
-\+|\-|\*|\/							return BINOP;
+\+|\-|\*|\/							{
+                                        yylval.binop = new Binop(std::string(yytext));
+                                        return BINOP;
+                                    }
 
 [a-zA-Z][a-zA-Z0-9]*				{
                                         yylval.identifier = new Identifier(std::string(yytext));
@@ -74,7 +77,7 @@ continue							return CONTINUE;
                                     }
 
 0|([1-9][0-9]*)						{
-                                        yylval.identifier = new Identifier(std::string(yytext));
+                                        yylval.num = new Num(std::string(yytext));
                                         return NUM;
                                     }
 

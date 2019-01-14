@@ -133,12 +133,12 @@ Funcs:              /*epsilon*/
                     | FuncDecl Funcs
 ;
 
-FuncDecl:           RetType ID {checkID($2->ID);} LPAREN Formals RPAREN {addFuncScope($2->ID, $5->formals, $1->exp_type);} LBRACE Statements RBRACE {
+FuncDecl:           RetType ID {checkID($2->ID);} LPAREN Formals RPAREN {
+    addFuncScope($2->ID, $5->formals, $1->exp_type);
+} LBRACE Statements RBRACE {
                                                                                                                                      popScope();
                                                                                                                                      cur_ret_type = VOIDEXP;
-                                                                                                                                     delete $1;
-                                                                                                                                     delete $2;
-                                                                                                                                     delete $5;
+                                                                 
                                                                                                                                  };
 
 Structs:            /*epsilon*/
@@ -147,8 +147,6 @@ Structs:            /*epsilon*/
 
 StructsDecl:        STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC {
                                                                 structs_stack.back().push_back(StructType($2->ID, $5->fields));
-                                                                delete $2;
-                                                                delete $5;
                                                              };
 
 RetType:            Type {$$ = $1;}
@@ -270,9 +268,6 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     exit(0);
                                                 }
                                                 tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
-                                                delete $1;
-                                                delete $2;
-                                                delete $4;
                                             }
                     | StructType ID ASSIGN Exp SC {
                                                     checkID($2->ID);
@@ -458,20 +453,21 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                         }
                                         $$ = new Expression((operatorType($1, $3)),$1->used_register);
                                         string operation;
-                                        if (($2->operation)=="+") operation="addu";
-										else if (($2->operation)=="-") operation="subu";
-										else if (($2->operation)=="*") operation="mul";
-										else if (($2->operation)=="/") operation="div";
-										else ; //ERROR shouldn't get here
+										string op = $2->BINOP;
+
+                                        if (op=="+") operation="addu"; 
+										else if (op=="-") operation="subu"; 
+										else if (op=="*") operation="mul";  
+										else if (op=="/") operation="div"; 
+										else operation="nop";  //ERROR shouldn't get here
                                         if(operation == "div"){
                                         //TODO: check if not divide by 0
                                         }
+                                                                                
 										string reg1=numToString($1->used_register+8);
 										string reg2=numToString($3->used_register+8);
                                         CodeBuffer::instance().emit(operation+" $"+reg1+",$"+reg1+",$"+reg2);
                                         freeRegister($3->used_register);
-                                        delete $1;
-                                        delete $3;
                                     }
                     | ID {
                             SymEntry e = getSymbolEntry($1->ID, tables_stack);
@@ -536,23 +532,22 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                     | Call {$$ = $1;}
                     | NUM {
                             $$ = new Expression(INTEXP,getAvailableRegister());
-							string num_as_string = numToString($1->value);
-							string reg =numToString($$->used_register+8);
+							string num_as_string = $1->value;
+							string reg = numToString($$->used_register+8);
 							CodeBuffer::instance().emit("li $"+reg+","+num_as_string);
-                            delete $1;
                           }
                     | NUM B {
-								string val_str = numToString ($1->value);
+								string val_str = $1->value;
                                 if(strtol(val_str.c_str(), NULL, 10) > 255){
                                     output::errorByteTooLarge(yylineno, val_str);
                                     exit(0);
                                 }
 								$$ = new Expression(INTEXP,getAvailableRegister());
 								string reg=numToString($$->used_register+8);
-								CodeBuffer::instance().emit("li $"+reg+","+numToString($1->value));
-								if($1->value<0){
+								CodeBuffer::instance().emit("li $"+reg+","+($1->value));
+								//if($1->value<0){
 									//TODO: make sure the number is unsigned
-								}
+								//}
                                 delete $1;
                             }
                     | STRING{                          
@@ -803,7 +798,12 @@ int main(){
 
 
 
-    return yyparse();
+    yyparse();
+    
+    CodeBuffer::instance().printDataBuffer();
+    CodeBuffer::instance().printCodeBuffer();
+    
+    return 0;
 }
 
 void yyerror(const char*){
