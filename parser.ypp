@@ -8,6 +8,7 @@
 #include <string>
 #include "Node.h"
 #include "bp.hpp"
+#include "register_handler.h"
 
 extern int yylineno;
 
@@ -44,13 +45,8 @@ unsigned int num_of_while_scopes = 0;
 //var for knowing what type the current function returns
 ExpType cur_ret_type = VOIDEXP;
 
-#define NUM_OF_REGISTERS 18
-//all the availble for use registers. If register num i is available then availableRegisters[i]=true.
-vector<bool> availableRegisters(NUM_OF_REGISTERS);
-//returns the smallest register available
-int getAvailableRegister ();
-//frees register num i
-void freeRegister (int i);
+reg_handler = regHandler();
+
 //convert int to srting
 string numToString(int num);
 
@@ -816,26 +812,9 @@ void checkID(std::string& ID){
     }
 }
 
-int getAvailableRegister (){
-    for (int i=0;i<NUM_OF_REGISTERS;i++){
-        if (!availableRegisters[i]){
-            availableRegisters[i]=true;
-            return i;
-        }
-    }
-    //note: not suppose to get here
-    return -1;
-}
-void freeRegister (int i){
-    if (i<0 || i>=NUM_OF_REGISTERS){
-        //note: not suppose to get here
-        std::cout << "ERROR" << std::endl;
-        return;
-    }
-    availableRegisters[i]=false;
-}
 
-//converting int to strint - found online
+
+//converting int to string - found online
 string intToString (int num){
 	stringstream str1; 
 	str1 << num; 
