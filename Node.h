@@ -26,7 +26,7 @@ struct Expression : public Node {
     int used_register;
     std::vector<int> truelist;
     std::vector<int> falselist;
-    Expression(const ExpType exp_type, int used_register) : Node(), exp_type(exp_type) , used_register(used_register), truelist(), falselist() {}
+    Expression(const ExpType exp_type, const int used_register) : Node(), exp_type(exp_type) , used_register(used_register), truelist(), falselist() {}
 };
 
 //struct for structures, string field is so we can know what kind of struct it is
@@ -113,13 +113,13 @@ struct FormalsList : public Node {
 };
 
 struct Binop : public Node {
-    std::string operation;
-    Binop(const std::string operation) : Node(), operation(operation) {}
+    std::string BINOP;
+    Binop(const std::string &BINOP) : Node(), BINOP(std::string(BINOP)) {}
 };
 
-struct NUM : public Node{
-    int value;
-    NUM (const int value) : Node(), value(value) {}
+struct Num : public Node{
+    std::string value;
+    Num (const std::string &value) : Node(), value(std::string(value)) {}
 };
 
 

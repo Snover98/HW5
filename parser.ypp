@@ -1,6 +1,7 @@
 %{
 /*C++ lang stuff*/
 #include <iostream>
+#include <sstream>
 #include <stdlib.h>
 #include "SymTable.h"
 #include <vector>
@@ -65,7 +66,7 @@ string numToString(int num);
     FormalStruct* formal_struct;
     FormalsList* formals_list;
 	Binop* binop;
-	NUM* num;
+	Num* num;
 }
 
 %left <node> LPAREN
@@ -77,7 +78,7 @@ string numToString(int num);
 %nonassoc <node> LBRACE
 %nonassoc <node> RBRACE
 %nonassoc <node> RELOP
-%left <node> BINOP
+%left <binop> BINOP
 %nonassoc <node> TRUE
 %nonassoc <node> FALSE
 %nonassoc <node> RETURN
@@ -91,7 +92,7 @@ string numToString(int num);
 %right <node> ASSIGN
 %nonassoc <node> VOID
 %nonassoc <identifier> ID
-%nonassoc <identifier> NUM
+%nonassoc <num> NUM
 %nonassoc <node> STRING
 %nonassoc <node> INT
 %nonassoc <node> BYTE
@@ -128,12 +129,12 @@ Funcs:              /*epsilon*/
                     | FuncDecl Funcs
 ;
 
-FuncDecl:           RetType ID {checkID($2->ID);} LPAREN Formals RPAREN {addFuncScope($2->ID, $5->formals, $1->exp_type);} LBRACE Statements RBRACE {
+FuncDecl:           RetType ID {checkID($2->ID);} LPAREN Formals RPAREN {
+    addFuncScope($2->ID, $5->formals, $1->exp_type);
+} LBRACE Statements RBRACE {
                                                                                                                                      popScope();
                                                                                                                                      cur_ret_type = VOIDEXP;
-                                                                                                                                     delete $1;
-                                                                                                                                     delete $2;
-                                                                                                                                     delete $5;
+
                                                                                                                                  };
 
 Structs:            /*epsilon*/
@@ -142,8 +143,6 @@ Structs:            /*epsilon*/
 
 StructsDecl:        STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC {
                                                                 structs_stack.back().push_back(StructType($2->ID, $5->fields));
-                                                                delete $2;
-                                                                delete $5;
                                                              };
 
 RetType:            Type {$$ = $1;}
@@ -265,9 +264,6 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     exit(0);
                                                 }
                                                 tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
-                                                delete $1;
-                                                delete $2;
-                                                delete $4;
                                             }
                     | StructType ID ASSIGN Exp SC {
                                                     checkID($2->ID);
@@ -453,22 +449,21 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                         }
                                         $$ = new Expression((operatorType($1, $3)),$1->used_register);
                                         string operation;
-                                        switch ((Binop*)$2->operation){
-                                            case "+": operation="addu";
-                                            case "-": operation="subu";
-                                            case "*": operation="mul";
-                                            case "/": operation="div";
-                                            default: ;//ERROR ;
-                                        }
+										string op = $2->BINOP;
+
+                                        if (op=="+") operation="addu";
+										else if (op=="-") operation="subu";
+										else if (op=="*") operation="mul";
+										else if (op=="/") operation="div";
+										else operation="nop";  //ERROR shouldn't get here
                                         if(operation == "div"){
                                         //TODO: check if not divide by 0
                                         }
+
 										string reg1=numToString($1->used_register+8);
 										string reg2=numToString($3->used_register+8);
                                         CodeBuffer::instance().emit(operation+" $"+reg1+",$"+reg1+",$"+reg2);
                                         freeRegister($3->used_register);
-                                        delete $1;
-                                        delete $3;
                                     }
                     | ID {
                             SymEntry e = getSymbolEntry($1->ID, tables_stack);
@@ -486,9 +481,10 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 								//TODO: check if the stack use is correct
 								int reg=getAvailableRegister();
 								string reg_as_string =numToString(reg+8);
-								string offest = numToString($1->offset);
+								int offset; //TODO: get ID's offest in the stack
+								string offset_str = numToString(offset);
 								CodeBuffer::instance().emit("addu $"+reg_as_string+",$"+reg_as_string+",$fp");
-								CodeBuffer::instance().emit("lw $"+reg_as_string+","+offest);
+								CodeBuffer::instance().emit("lw $"+reg_as_string+","+offset_str);
 								$$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
 								$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("beq $0, $" + reg_as_string + ","));
 								freeRegister(reg);
@@ -497,9 +493,10 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 							else{
 								$$->used_register = getAvailableRegister();
 								string reg=numToString($$->used_register+8);
-								string offest = numToString($1->offset);
+								int offset; //TODO: get ID's offest in the stack
+								string offset_str = numToString(offset);
 								CodeBuffer::instance().emit("addu $"+reg+",$"+reg+",$fp");
-								CodeBuffer::instance().emit("lw $"+reg+","+offest);
+								CodeBuffer::instance().emit("lw $"+reg+","+offset_str);
 							}
                             delete $1;
                          }
@@ -531,22 +528,22 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                     | Call {$$ = $1;}
                     | NUM {
                             $$ = new Expression(INTEXP,getAvailableRegister());
-							string num_as_string = numToString($1->value);
-							string reg =numToString($$->used_register+8);
+							string num_as_string = $1->value;
+							string reg = numToString($$->used_register+8);
 							CodeBuffer::instance().emit("li $"+reg+","+num_as_string);
-                            delete $1;
                           }
                     | NUM B {
-                                if(strtol($1->ID.c_str(), NULL, 10) > 255){
-                                    output::errorByteTooLarge(yylineno, $1->ID);
+								string val_str = $1->value;
+                                if(strtol(val_str.c_str(), NULL, 10) > 255){
+                                    output::errorByteTooLarge(yylineno, val_str);
                                     exit(0);
                                 }
 								$$ = new Expression(INTEXP,getAvailableRegister());
 								string reg=numToString($$->used_register+8);
-								CodeBuffer::instance().emit("li $"+reg+","+numToString($1->value);
-								if($1->value<0){
+								CodeBuffer::instance().emit("li $"+reg+","+($1->value));
+								//if($1->value<0){
 									//TODO: make sure the number is unsigned
-								}
+								//}
                                 delete $1;
                             }
                     | STRING{                          
@@ -797,7 +794,12 @@ int main(){
 
 
 
-    return yyparse();
+    yyparse();
+
+    CodeBuffer::instance().printDataBuffer();
+    CodeBuffer::instance().printCodeBuffer();
+
+    return 0;
 }
 
 void yyerror(const char*){
@@ -815,8 +817,8 @@ void checkID(std::string& ID){
 
 
 //converting int to string - found online
-string intToString (int num){
-	stringstream str1; 
+string numToString (int num){
+	stringstream str1;
 	str1 << num; 
 	string num_as_string = str1.str();
 	return num_as_string;

@@ -16,7 +16,7 @@ bool isLegalExpType(Expression *actual, Expression *expected) {
 }
 
 bool isLegalExpType(Expression *actual, ExpType expected) {
-    Expression e = Expression(expected);
+    Expression e = Expression(expected,-1);
     return isLegalExpType(actual, &e);
 }
 
@@ -26,7 +26,7 @@ bool isLegalExpType(Expression *actual, std::string &expected) {
 }
 
 bool isLegalExpType(ExpType actual, ExpType expected) {
-    Expression e = Expression(actual);
+    Expression e = Expression(actual,-1);
     return isLegalExpType(&e, expected);
 }
 
