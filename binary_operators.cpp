@@ -31,7 +31,7 @@ std::string operatorString(Expression *exp1, Expression *exp2, std::string &op, 
     return command.str();
 }
 
-std::string truncByte(Expression* exp, regHandler& r){
+std::string truncByte(Expression* exp){
     //create the string of the command that will truncuate the byte
     std::stringstream command;
     command << "and " << regName(exp->used_register) << ", " << regName(exp->used_register) << ", " << "255";
