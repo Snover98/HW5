@@ -470,7 +470,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 							//check if this is a boolean expression 
 							if ($$->exp_type==BOOLEXP){
 								//TODO: check if the stack use is correct
-								int reg=getAvailableRegister();
+								int reg=reg_handler.getAvailableRegister();
 								string reg_as_string =numToString(reg+8);
 								int offset; //TODO: get ID's offest in the stack
 								string offset_str = numToString(offset);
@@ -482,7 +482,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 							}
 							//if it isn't a boolean expression then just save the value in a register;
 							else{
-								$$->used_register = getAvailableRegister();
+								$$->used_register = reg_handler.getAvailableRegister();
 								string reg=numToString($$->used_register+8);
 								int offset; //TODO: get ID's offest in the stack
 								string offset_str = numToString(offset);
@@ -518,7 +518,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                    }
                     | Call {$$ = $1;}
                     | NUM {
-                            $$ = new Expression(INTEXP,getAvailableRegister());
+                            $$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
 							string num_as_string = $1->value;
 							string reg = numToString($$->used_register+8);
 							CodeBuffer::instance().emit("li $"+reg+","+num_as_string);
@@ -529,7 +529,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                     output::errorByteTooLarge(yylineno, val_str);
                                     exit(0);
                                 }
-								$$ = new Expression(INTEXP,getAvailableRegister());
+								$$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
 								string reg=numToString($$->used_register+8);
 								CodeBuffer::instance().emit("li $"+reg+","+($1->value));
 								//if($1->value<0){
@@ -539,7 +539,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                             }
                     | STRING{                          
 
-								$$ = new Expression(STRINGEXP,getAvailableRegister());
+								$$ = new Expression(STRINGEXP,reg_handler.getAvailableRegister());
 							}
                     | TRUE  {
 								$$ = new Expression(BOOLEXP,-1);
@@ -569,12 +569,20 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                     delete $1;
                                     delete $3;
                                   }
-                    | Exp OR Exp {
+                    | Exp M OR Exp {
                                     if($1->exp_type != BOOLEXP || $3->exp_type != BOOLEXP){
                                         output::errorMismatch(yylineno);
                                         exit(0);
                                     }
                                     $$ = new Expression(BOOLEXP,-1);
+									CodeBuffer::instance().bpatch($1->falselist,$3->quad);
+									string truelist = CodeBuffer::instance().next();
+									$$->truelist = CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+									string falselist = CodeBuffer::instance().next();
+									$$->falselist = CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+									CodeBuffer::instance().bpatch($1->truelist, truelist);
+									CodeBuffer::instance().bpatch($4->false_list, falselist);
+									CodeBuffer::instance().bpatch($4->truelist, truelist);
                                     delete $1;
                                     delete $3;
                                  }
@@ -595,6 +603,11 @@ BoolExp:            Exp {
                                 exit(0);
                             }
                         }
+M:					/*epsilon*/
+						{
+							$$ = new M();
+							$$->quad=CodeBuffer::instance().next();
+						}
 
 ;
 

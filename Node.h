@@ -122,6 +122,11 @@ struct Num : public Node{
     Num (const std::string &value) : Node(), value(std::string(value)) {}
 };
 
+struct M : public Node{
+    std::string quad;
+    M() : Node(), quad()) {}
+};
+
 
 //checks if an expression is a number
 inline bool isNumExp(Expression *e) {
