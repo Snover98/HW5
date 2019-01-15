@@ -15,7 +15,7 @@ std::string operatorCommand(std::string &op) {
         return "sub";
     }
 
-    return "ILLEGAL";
+    return "nop";
 }
 
 
