@@ -124,7 +124,7 @@ struct Num : public Node{
 
 struct M : public Node{
     std::string quad;
-    M() : Node(), quad()) {}
+    M() : Node(), quad(){}
 };
 
 
