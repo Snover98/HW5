@@ -555,8 +555,8 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                     exit(0);
                                 }
                                 $$ = new Expression(BOOLEXP,-1);
-								$$->truelist=$$->falselist;
-								$$->falselist=$$->truelist;
+								$$->truelist=$2->falselist;
+								$$->falselist=$2->truelist;
                                 delete $2;
                               }
                     | Exp AND Exp {
