@@ -67,6 +67,7 @@ string numToString(int num);
     FormalsList* formals_list;
 	Binop* binop;
 	Num* num;
+	Relop* relop;
 }
 
 %nonassoc <node> STRUCT
@@ -93,7 +94,7 @@ string numToString(int num);
 %right <node> ASSIGN
 %left <node> OR
 %left <node> AND
-%nonassoc <node> RELOP
+%nonassoc <relop> RELOP
 %left <binop> BINOP
 %right <node> NOT
 %left <node> PERIOD
@@ -441,7 +442,11 @@ StructType:         STRUCT ID {
                         delete $2;
                     };
 
-Exp:                LPAREN Exp RPAREN {$$ = $2;}
+Exp:                LPAREN Exp RPAREN {
+										$$ = $2;
+										$$->truelist=$2->truelist;
+										$$->falselist=$2->falselist;
+									  }
                     | Exp BINOP Exp {
                                         if(!isNumExp($1) || !isNumExp($3)){
                                             output::errorMismatch(yylineno);
@@ -450,7 +455,7 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                         $$ = new Expression((operatorType($1, $3)),$1->used_register);
 
                                         //emit code computing the expression
-                                        CodeBuffer::instance().emit(operatorString(exp1, exp2, $2->BINOP, reg_handler));
+                                        CodeBuffer::instance().emit(operatorString($1, $3, $2->BINOP, reg_handler));
                                         //if the result should be a byte, mask it with 255
                                         if((operatorType($1, $3) == BYTEEXP){
                                              CodeBuffer::instance().emit(truncByte($$));
@@ -559,32 +564,26 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
 								$$->falselist=$2->truelist;
                                 delete $2;
                               }
-                    | Exp AND Exp {
+                    | Exp AND M Exp {
                                     if($1->exp_type != BOOLEXP || $3->exp_type != BOOLEXP){
                                         output::errorMismatch(yylineno);
                                         exit(0);
                                     }
                                     $$ = new Expression(BOOLEXP,-1);
-									
-                                    delete $1;
-                                    delete $3;
+									CodeBuffer::instance().bpatch($1->truelist,$3->quad);
+									$$->truelist=$4->truelist;
+									$$->falselist=CodeBuffer::merge($1->falselist,$2->falselist);
+
                                   }
-                    | Exp M OR Exp {
+                    | Exp OR M Exp {
                                     if($1->exp_type != BOOLEXP || $3->exp_type != BOOLEXP){
                                         output::errorMismatch(yylineno);
                                         exit(0);
                                     }
                                     $$ = new Expression(BOOLEXP,-1);
 									CodeBuffer::instance().bpatch($1->falselist,$3->quad);
-									string truelist = CodeBuffer::instance().next();
-									$$->truelist = CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
-									string falselist = CodeBuffer::instance().next();
-									$$->falselist = CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
-									CodeBuffer::instance().bpatch($1->truelist, truelist);
-									CodeBuffer::instance().bpatch($4->false_list, falselist);
-									CodeBuffer::instance().bpatch($4->truelist, truelist);
-                                    delete $1;
-                                    delete $3;
+									$$->falselist = $4->falselist;
+									$$->truelist = CodeBuffer::merge($1->truelist, $4->truelist
                                  }
                     | Exp RELOP Exp {
                                         if(!isNumExp($1) || !isNumExp($3)){
@@ -592,9 +591,12 @@ Exp:                LPAREN Exp RPAREN {$$ = $2;}
                                             exit(0);
                                         }
                                         $$ = new Expression(BOOLEXP,-1);
-                                        delete $1;
-                                        delete $3;
-                                    }
+										$$->truelist=CodeBuffer::instance().next();
+										$$->falselist=CodeBuffer::instance().next();
+										//emit code computing the expression
+                                        $$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit(relopString($1, $3, $2->op, reg_handl)));										
+										$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+									 }
 ;
 
 BoolExp:            Exp {
@@ -603,6 +605,8 @@ BoolExp:            Exp {
                                 exit(0);
                             }
                         }
+;
+
 M:					/*epsilon*/
 						{
 							$$ = new M();

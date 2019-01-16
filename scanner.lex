@@ -64,7 +64,10 @@ continue							return CONTINUE;
 
 =									return ASSIGN;
 
-(==)|(!=)|(<)|(>)|(<=)|(>=)			return RELOP;
+(==)|(!=)|(<)|(>)|(<=)|(>=)			{
+                                        yyval.relop = new Relop(std::string(yytext));
+                                        return RELOP;
+                                    }
 
 \+|\-|\*|\/							{
                                         yylval.binop = new Binop(std::string(yytext));

@@ -127,6 +127,11 @@ struct M : public Node{
     M() : Node(), quad(){}
 };
 
+struct Relop : public  Node {
+    std::string op;
+    Relop(const std::string &op) : Node(), op(std::string(op)) {}
+};
+
 
 //checks if an expression is a number
 inline bool isNumExp(Expression *e) {
