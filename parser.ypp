@@ -69,36 +69,36 @@ string numToString(int num);
 	Num* num;
 }
 
-%left <node> LPAREN
-%left <node> RPAREN
-%left <node> PERIOD
-%right <node> NOT
-%left <node> AND
-%left <node> OR
-%nonassoc <node> LBRACE
+%nonassoc <node> STRUCT
+%nonassoc <node> BOOL
+%nonassoc <node> B
+%nonassoc <node> BYTE
+%nonassoc <node> INT
+%nonassoc <node> STRING
+%nonassoc <num> NUM
+%nonassoc <identifier> ID
+%nonassoc <node> VOID
+%nonassoc <node> COMMA
+%nonassoc <node> SC
+%nonassoc <node> CONTINUE
+%nonassoc <node> BREAK
+%nonassoc <node> WHILE
+%nonassoc <node> ELSE
+%nonassoc <node> IF
+%nonassoc <node> RETURN
+%nonassoc <node> FALSE
+%nonassoc <node> TRUE
 %nonassoc <node> RBRACE
+%nonassoc <node> LBRACE
+%right <node> ASSIGN
+%left <node> OR
+%left <node> AND
 %nonassoc <node> RELOP
 %left <binop> BINOP
-%nonassoc <node> TRUE
-%nonassoc <node> FALSE
-%nonassoc <node> RETURN
-%nonassoc <node> IF
-%nonassoc <node> ELSE
-%nonassoc <node> WHILE
-%nonassoc <node> BREAK
-%nonassoc <node> CONTINUE
-%nonassoc <node> SC
-%nonassoc <node> COMMA
-%right <node> ASSIGN
-%nonassoc <node> VOID
-%nonassoc <identifier> ID
-%nonassoc <num> NUM
-%nonassoc <node> STRING
-%nonassoc <node> INT
-%nonassoc <node> BYTE
-%nonassoc <node> B
-%nonassoc <node> BOOL
-%nonassoc <node> STRUCT
+%right <node> NOT
+%left <node> PERIOD
+%left <node> RPAREN
+%left <node> LPAREN
 
 %type <expression> RetType Call Type Exp BoolExp
 %type <formals_list> FormalsList Formals
