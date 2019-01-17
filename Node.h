@@ -32,9 +32,10 @@ struct Expression : public Node {
 //struct for structures, string field is so we can know what kind of struct it is
 struct Structure : public Expression {
     std::string struct_type;
+    std::vector<int> nextlist;
 
-    Structure(const ExpType exp_type ) : Expression(exp_type,-1), struct_type(std::string("")){}
-    Structure(const std::string &struct_type ) : Expression(STRUCTEXP,-1), struct_type(std::string(struct_type)) {}
+    Structure(const ExpType exp_type ) : Expression(exp_type,-1), struct_type(std::string("")) , nextlist(){}
+    Structure(const std::string &struct_type ) : Expression(STRUCTEXP,-1), struct_type(std::string(struct_type)) , nextlist() {}
 };
 
 //used when there is an identifier read by lex, only used to create the relevant Expression and than deleted
@@ -125,6 +126,12 @@ struct Num : public Node{
 struct M : public Node{
     std::string quad;
     M() : Node(), quad(){}
+};
+
+struct N : public Node{
+    std::vector<int> nextlist;
+    N() : Node() , nextlist() {}
+
 };
 
 struct Relop : public  Node {

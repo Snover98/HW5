@@ -230,17 +230,49 @@ Statement:          OpenStatement
                     | ClosedStatement
 ;
 
-OpenStatement:      IF M1 LPAREN BoolExp RPAREN Statement M2
-                    | IF M1 LPAREN BoolExp RPAREN ClosedStatement M2 ELSE M1 OpenStatement M2
-                    | WHILE M1 LPAREN BoolExp RPAREN M3 OpenStatement M4 M2
+OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2 
+								{
+									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
+									$$->nextlist=CodeBuffer::merge($4->falselist,$7->nextlist);
+
+								}
+                    | IF M1 LPAREN BoolExp RPAREN M ClosedStatement M2 N ELSE M1 M OpenStatement M2
+								{
+									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
+									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
+									string temp=CodeBuffer::merge($7->nextlist,$9->nextlist);
+									$$->nextlist = CodeBuffer::merge(temp,$13->nextlist);
+								}
+                    | WHILE M1 M LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2
+								{
+									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
+									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
+									$$->nextlist=$5->falselist;
+									CodeBuffer::instance().emit("j "+$3->quad);
+								}
 ;
 
 ClosedStatement:    SimpleStatement
-                    | IF M1 LPAREN BoolExp RPAREN ClosedStatement M2 ELSE M1 ClosedStatement M2
-                    | WHILE M1 LPAREN BoolExp RPAREN M3 ClosedStatement M4 M2
+                    | IF M1 LPAREN BoolExp RPAREN M ClosedStatement M2 N ELSE M1 M ClosedStatement M2
+								{
+									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
+									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
+									string temp=CodeBuffer::merge($7->nextlist,$9->nextlist);
+									$$->nextlist = CodeBuffer::merge(temp,$13->nextlist);
+								}
+                    | WHILE M1 M LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2
+								{
+									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
+									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
+									$$->nextlist=$5->falselist;
+									CodeBuffer::instance().emit("j "+$3->quad);
+								}
 ;
 
 SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
+								{
+									$$->nextlist=$3->nextlist;
+								}
                     | Type ID SC {
                                     checkID($2->ID);
                                     tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
@@ -611,6 +643,14 @@ M:					/*epsilon*/
 						{
 							$$ = new M();
 							$$->quad=CodeBuffer::instance().next();
+						}
+
+;
+
+N:					/*epsilon*/
+						{
+							$$ = new N();
+							$$->nextlist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
 						}
 
 ;
