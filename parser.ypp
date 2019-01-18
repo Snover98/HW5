@@ -546,6 +546,8 @@ Exp:                LPAREN Exp RPAREN {
                                             exit(0);
                                         }
 										int reg = getAvailableRegister();
+										//TODO add code for loading value into the register
+
                                         $$ = new Expression((varToExp(field_type)),reg);
                                         delete $1;
                                         delete $3;
@@ -574,6 +576,8 @@ Exp:                LPAREN Exp RPAREN {
                     | STRING{                          
 
 								$$ = new Expression(STRINGEXP,reg_handler.getAvailableRegister());
+								//TODO make sure that the string is in the data area
+								//TODO load string from data (or use the address?)
 							}
                     | TRUE  {
 								$$ = new Expression(BOOLEXP,-1);
@@ -622,7 +626,8 @@ Exp:                LPAREN Exp RPAREN {
                                         $$ = new Expression(BOOLEXP,-1);
 										$$->truelist=CodeBuffer::instance().next();
 										$$->falselist=CodeBuffer::instance().next();
-										//emit code computing the expression
+										//TODO emit code computing the expression
+
                                         $$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit(relopString($1, $3, $2->op, reg_handl)));										
 										$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
 									 }
@@ -657,7 +662,7 @@ M1:                 {addEmptyScope();}
 
 M2:                 {popScope();}
 ;
-
+//TODO add code making sure break and continue work correctly
 M3:                  {++num_of_while_scopes;}
 ;
 
