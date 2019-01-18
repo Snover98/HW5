@@ -66,4 +66,14 @@ StructType getStructTypeEntry(const std::vector<std::vector<StructType> > &struc
     return StructType();
 }
 
+int StructType::fieldOffset(const std::string& field_name){
+    for(int i = 0; i < fields.size(); ++i) {
+        if (field_name == fields[i].first) {
+            return i;
+        }
+    }
+
+    //default return value
+    return -1;
+}
 

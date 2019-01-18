@@ -32,6 +32,8 @@ struct StructType {
         fields = StructFieldsType(fields);
         return *this;
     }
+
+    int fieldOffset(const std::string& field_name);
 };
 
 void addStructType(std::vector<StructType> &structs, StructType t);
