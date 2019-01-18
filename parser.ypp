@@ -840,6 +840,7 @@ void addPrints(){
     codeBuffer::instance().emit("li $v0,4");
     codeBuffer::instance().emit("syscall");
     codeBuffer::instance().emit("jr $ra");
+    codeBuffer::instance().emit("");
 
     tables_stack.back().addEntry("printi", printi_func_params, NOTYPE);
     //emit code for printi
@@ -848,6 +849,7 @@ void addPrints(){
     codeBuffer::instance().emit("li $v0,1");
     codeBuffer::instance().emit("syscall");
     codeBuffer::instance().emit("jr $ra");
+    codeBuffer::instance().emit("");
 }
 
 int main(){
