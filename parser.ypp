@@ -271,23 +271,27 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
 									$$->nextlist=$3->nextlist;
 								}
                     | Type ID SC {
+                                    //TODO maybe make var declarations make empty space in the stack
                                     checkID($2->ID);
                                     tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
                                     delete $1;
                                     delete $2;
                                  }
                     | StructType ID SC {
+                                        //TODO maybe make var declarations make empty space in the stack
                                         checkID($2->ID);
                                         tables_stack.back().addEntry($2->ID, $1->struct_type);
                                         delete $1;
                                         delete $2;
                                        }
                     | STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC {
+                                                                                    //TODO maybe make var declarations make empty space in the stack
                                                                                     structs_stack.back().push_back(StructType($2->ID, $5->fields));
                                                                                     delete $2;
                                                                                     delete $5;
                                                                                   }
                     | Type ID ASSIGN Exp SC {
+                                                //TODO maybe make var declarations make empty space in the stack
                                                 checkID($2->ID);
                                                 if(!isLegalExpType($4, $1)){
                                                     output::errorMismatch(yylineno);
@@ -296,6 +300,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                 tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
                                             }
                     | StructType ID ASSIGN Exp SC {
+                                                    //TODO maybe make var declarations make empty space in the stack
                                                     checkID($2->ID);
                                                     if(!isLegalExpType($4, $1)){
                                                         output::errorMismatch(yylineno);
