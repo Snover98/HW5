@@ -28,21 +28,22 @@ struct SymEntry {
     int offset;
     FunctionType func_type;
     std::string struct_type;
-    int func_label;
 
-    SymEntry() : type(NOTYPE), offset(0), func_label(0) {}
+    SymEntry() : type(NOTYPE), offset(0) {}
 
     SymEntry(const std::string &ID, const std::string &struct_type, int offset) : ID(std::string(ID)), type(STRUCTTYPE),
-                                                                                  offset(offset), func_label(0),
+                                                                                  offset(offset),
                                                                                   struct_type(
                                                                                           std::string(struct_type)) {}
 
     SymEntry(const std::string &ID, VarType type, int offset) : ID(std::string(ID)), type(type), offset(offset),
                                                                 struct_type("") {}
 
-    SymEntry(const std::string &ID, const std::vector<FuncParam> &func_params, VarType ret_type, int f_label = 0) : ID(
-            std::string(ID)), struct_type(""), type(FUNCTYPE), offset(0), func_label(f_label), func_type(
-            FunctionType(func_params, ret_type)) {}
+    SymEntry(const std::string &ID, const std::vector<FuncParam> &func_params, VarType ret_type) : ID(std::string(ID)),
+                                                                                                   struct_type(""),
+                                                                                                   type(FUNCTYPE),
+                                                                                                   offset(0), func_type(
+                    FunctionType(func_params, ret_type)) {}
 
     bool isVariable() {
         return (type == BOOLTYPE || type == BYTETYPE || type == INTTYPE || type == STRUCTTYPE);
