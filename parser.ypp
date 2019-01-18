@@ -131,10 +131,9 @@ Funcs:              /*epsilon*/
 FuncDecl:           RetType ID {checkID($2->ID);} LPAREN Formals RPAREN {
     addFuncScope($2->ID, $5->formals, $1->exp_type);
 } LBRACE Statements RBRACE {
-                                                                                                                                     popScope();
-                                                                                                                                     cur_ret_type = VOIDEXP;
-
-                                                                                                                                 };
+    popScope();
+    cur_ret_type = VOIDEXP;
+};
 
 Structs:            /*epsilon*/
                     | StructsDecl Structs
@@ -745,6 +744,10 @@ void addFuncScope(const std::string &ID, const std::vector<FormalStruct> &formal
         tables_stack.back().addEntry(*e);
         delete e;
     }
+
+    emitComment("CODE OF FUNCTION " + ID);
+    CodeBuffer::instance().emit(ID + ":");
+    //add empty place for local variables
 }
 
 std::string typeToString(VarType type){
