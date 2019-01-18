@@ -29,13 +29,17 @@ struct Expression : public Node {
     Expression(const ExpType exp_type, const int used_register) : Node(), exp_type(exp_type) , used_register(used_register), truelist(), falselist() {}
 };
 
+struct Statement : public  Node{
+    std::vector<int> nextlist;
+    Statement() : Node() , nextlist() {}
+};
+
 //struct for structures, string field is so we can know what kind of struct it is
 struct Structure : public Expression {
     std::string struct_type;
-    std::vector<int> nextlist;
 
-    Structure(const ExpType exp_type ) : Expression(exp_type,-1), struct_type(std::string("")) , nextlist(){}
-    Structure(const std::string &struct_type ) : Expression(STRUCTEXP,-1), struct_type(std::string(struct_type)) , nextlist() {}
+    Structure(const ExpType exp_type ) : Expression(exp_type,-1), struct_type(std::string("")) {}
+    Structure(const std::string &struct_type ) : Expression(STRUCTEXP,-1), struct_type(std::string(struct_type)) {}
 };
 
 //used when there is an identifier read by lex, only used to create the relevant Expression and than deleted

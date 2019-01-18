@@ -47,7 +47,7 @@ unsigned int num_of_while_scopes = 0;
 //var for knowing what type the current function returns
 ExpType cur_ret_type = VOIDEXP;
 
-reg_handler = regHandler();
+regHandler reg_handler = regHandler();
 
 
 %}
@@ -55,6 +55,7 @@ reg_handler = regHandler();
 %union{
     Node* node;
     Expression* expression;
+	Statement* statement;
     Structure* structure;
     Identifier* identifier;
     ExpressionList* expression_list;
@@ -66,6 +67,8 @@ reg_handler = regHandler();
 	Binop* binop;
 	Num* num;
 	Relop* relop;
+	M* m;
+	N* n;
 }
 
 %nonassoc <node> STRUCT
@@ -99,13 +102,16 @@ reg_handler = regHandler();
 %left <node> RPAREN
 %left <node> LPAREN
 
-%type <expression> RetType Call Type Exp BoolExp
+%type <expression> RetType Type Exp BoolExp
+%type <statement> Statement SimpleStatement Statements ClosedStatement OpenStatement Call
 %type <formals_list> FormalsList Formals
 %type <formal_struct> FormalDecl
 %type <struct_memory_list> StructMemList
 %type <struct_memory> StructMem
 %type <expression_list> ExpList
 %type <structure> StructType
+%type <m> M
+%type <n> N
 
 
 
@@ -145,7 +151,7 @@ StructsDecl:        STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC 
 
 RetType:            Type {$$ = $1;}
                     | VOID {
-									int reg=getAvailableRegister();
+									int reg=reg_handler.getAvailableRegister();
 									$$ = new Expression(VOIDEXP,reg);
 						   }
 ;
@@ -229,19 +235,22 @@ Statement:          OpenStatement
 
 OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2 
 								{
+									$$=new Statement();
 									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
 									$$->nextlist=CodeBuffer::merge($4->falselist,$7->nextlist);
 
 								}
                     | IF M1 LPAREN BoolExp RPAREN M ClosedStatement M2 N ELSE M1 M OpenStatement M2
 								{
+									$$=new Statement();
 									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
 									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
-									string temp=CodeBuffer::merge($7->nextlist,$9->nextlist);
-									$$->nextlist = CodeBuffer::merge(temp,$13->nextlist);
+									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist, 
+											$9->nextlist),$13->nextlist);
 								}
                     | WHILE M1 M LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2
 								{
+									$$=new Statement();
 									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
 									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
 									$$->nextlist=$5->falselist;
@@ -252,13 +261,14 @@ OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2
 ClosedStatement:    SimpleStatement
                     | IF M1 LPAREN BoolExp RPAREN M ClosedStatement M2 N ELSE M1 M ClosedStatement M2
 								{
+									$$=new Statement();
 									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
 									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
-									string temp=CodeBuffer::merge($7->nextlist,$9->nextlist);
-									$$->nextlist = CodeBuffer::merge(temp,$13->nextlist);
+									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist,$9->nextlist),$13->nextlist);
 								}
                     | WHILE M1 M LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2
 								{
+									$$=new Statement();
 									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
 									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
 									$$->nextlist=$5->falselist;
@@ -268,7 +278,7 @@ ClosedStatement:    SimpleStatement
 
 SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
 								{
-									$$->nextlist=$3->nextlist;
+									$$ = $3;
 								}
                     | Type ID SC {
                                     //TODO maybe make var declarations make empty space in the stack
@@ -417,7 +427,7 @@ Call:               ID LPAREN ExpList RPAREN {
                                                         ++it_arg;
                                                     }
 													
-													int reg=getAvailableRegister();
+													int reg=reg_handler.getAvailableRegister();
                                                     $$ = new Expression((varToExp(func_e.func_type.second)),reg);
                                                     delete $1;
                                                     delete $3;
@@ -434,7 +444,7 @@ Call:               ID LPAREN ExpList RPAREN {
                                                 exit(0);
                                             }
 
-                                            int reg=getAvailableRegister();
+                                            int reg=reg_handler.getAvailableRegister();
 											$$ = new Expression((varToExp(func_e.func_type.second)),reg);
                                             delete $1;
                                        }
@@ -454,16 +464,16 @@ ExpList:            Exp {
 
 Type:               INT {
                             //TODO why do we need a register for a type? they aren't actual expressions
-							int reg=getAvailableRegister();
+							int reg=reg_handler.getAvailableRegister();
 							$$ = new Expression(INTEXP,reg);
 						}
                     | BYTE 
 						{
-							int reg=getAvailableRegister();
+							int reg=reg_handler.getAvailableRegister();
 							$$ = new Expression(BYTEEXP,reg);
 						}
                     | BOOL {
-							int reg=getAvailableRegister();
+							int reg=reg_handler.getAvailableRegister();
 							$$ = new Expression(BOOLEXP,reg);
 							}
 ;
@@ -492,7 +502,7 @@ Exp:                LPAREN Exp RPAREN {
                                         //emit code computing the expression
                                         CodeBuffer::instance().emit(operatorString($1, $3, $2->BINOP, reg_handler));
                                         //if the result should be a byte, mask it with 255
-                                        if((operatorType($1, $3) == BYTEEXP){
+                                        if(operatorType($1, $3) == BYTEEXP){
                                              CodeBuffer::instance().emit(truncByte($$));
                                         }
                                     }
@@ -551,7 +561,7 @@ Exp:                LPAREN Exp RPAREN {
                                             output::errorUndefStructMember(yylineno, $1->ID);
                                             exit(0);
                                         }
-										int reg = getAvailableRegister();
+										int reg = reg_handler.getAvailableRegister();
 										//TODO add code for loading value into the register
 
                                         $$ = new Expression((varToExp(field_type)),reg);
@@ -604,7 +614,7 @@ Exp:                LPAREN Exp RPAREN {
                                 delete $2;
                               }
                     | Exp AND M Exp {
-                                    if($1->exp_type != BOOLEXP || $3->exp_type != BOOLEXP){
+                                    if($1->exp_type != BOOLEXP || $4->exp_type != BOOLEXP){
                                         output::errorMismatch(yylineno);
                                         exit(0);
                                     }
@@ -615,14 +625,14 @@ Exp:                LPAREN Exp RPAREN {
 
                                   }
                     | Exp OR M Exp {
-                                    if($1->exp_type != BOOLEXP || $3->exp_type != BOOLEXP){
+                                    if($1->exp_type != BOOLEXP || $4->exp_type != BOOLEXP){
                                         output::errorMismatch(yylineno);
                                         exit(0);
                                     }
                                     $$ = new Expression(BOOLEXP,-1);
 									CodeBuffer::instance().bpatch($1->falselist,$3->quad);
 									$$->falselist = $4->falselist;
-									$$->truelist = CodeBuffer::merge($1->truelist, $4->truelist
+									$$->truelist = CodeBuffer::merge($1->truelist, $4->truelist);
                                  }
                     | Exp RELOP Exp {
                                         if(!isNumExp($1) || !isNumExp($3)){
@@ -634,7 +644,7 @@ Exp:                LPAREN Exp RPAREN {
 										$$->falselist=CodeBuffer::instance().next();
 										//TODO emit code computing the expression
 
-                                        $$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit(relopString($1, $3, $2->op, reg_handl)));										
+                                        $$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit(relopString($1, $3, $2->op, reg_handler)));										
 										$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
 									 }
 ;
@@ -644,6 +654,7 @@ BoolExp:            Exp {
                                 output::errorMismatch(yylineno);
                                 exit(0);
                             }
+							$$=new Expression(BOOLEXP,-1);
                         }
 ;
 
@@ -840,21 +851,21 @@ void addPrints(){
 
     tables_stack.back().addEntry("print", print_func_params, NOTYPE);
     //emit code for print
-    codeBuffer::instance().emit("print:");
-    codeBuffer::instance().emit("lw $a0,0($sp)");
-    codeBuffer::instance().emit("li $v0,4");
-    codeBuffer::instance().emit("syscall");
-    codeBuffer::instance().emit("jr $ra");
-    codeBuffer::instance().emit("");
+    CodeBuffer::instance().emit("print:");
+    CodeBuffer::instance().emit("lw $a0,0($sp)");
+    CodeBuffer::instance().emit("li $v0,4");
+    CodeBuffer::instance().emit("syscall");
+    CodeBuffer::instance().emit("jr $ra");
+    CodeBuffer::instance().emit("");
 
     tables_stack.back().addEntry("printi", printi_func_params, NOTYPE);
     //emit code for printi
-    codeBuffer::instance().emit("printi:");
-    codeBuffer::instance().emit("lw $a0,0($sp)");
-    codeBuffer::instance().emit("li $v0,1");
-    codeBuffer::instance().emit("syscall");
-    codeBuffer::instance().emit("jr $ra");
-    codeBuffer::instance().emit("");
+    CodeBuffer::instance().emit("printi:");
+    CodeBuffer::instance().emit("lw $a0,0($sp)");
+    CodeBuffer::instance().emit("li $v0,1");
+    CodeBuffer::instance().emit("syscall");
+    CodeBuffer::instance().emit("jr $ra");
+    CodeBuffer::instance().emit("");
 }
 
 int main(){
