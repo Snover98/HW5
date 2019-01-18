@@ -10,6 +10,7 @@
 #include "Node.h"
 #include "bp.hpp"
 #include "register_handler.h"
+#include "utils.h"
 
 extern int yylineno;
 
@@ -47,9 +48,6 @@ unsigned int num_of_while_scopes = 0;
 ExpType cur_ret_type = VOIDEXP;
 
 reg_handler = regHandler();
-
-//convert int to srting
-string numToString(int num);
 
 
 %}
@@ -862,12 +860,3 @@ void checkID(std::string& ID){
     }
 }
 
-
-
-//converting int to string - found online
-string numToString (int num){
-	stringstream str1;
-	str1 << num; 
-	string num_as_string = str1.str();
-	return num_as_string;
-}

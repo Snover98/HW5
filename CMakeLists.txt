@@ -17,6 +17,6 @@ set(SOURCE_FILES
         StructType.cpp
         StructType.h
         SymTable.cpp
-        SymTable.h binary_operators.h binary_operators.cpp register_handler.cpp register_handler.h)
+        SymTable.h binary_operators.h binary_operators.cpp register_handler.cpp register_handler.h utils.cpp utils.h)
 
 add_executable(HW5 ${SOURCE_FILES})
