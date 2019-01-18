@@ -448,6 +448,7 @@ ExpList:            Exp {
 ;
 
 Type:               INT {
+                            //TODO why do we need a register for a type? they aren't actual expressions
 							int reg=getAvailableRegister();
 							$$ = new Expression(INTEXP,reg);
 						}
@@ -833,7 +834,20 @@ void addPrints(){
     printi_func_params.push_back(FuncParam(INTTYPE));
 
     tables_stack.back().addEntry("print", print_func_params, NOTYPE);
+    //emit code for print
+    codeBuffer::instance().emit("print:");
+    codeBuffer::instance().emit("lw $a0,0($sp)");
+    codeBuffer::instance().emit("li $v0,4");
+    codeBuffer::instance().emit("syscall");
+    codeBuffer::instance().emit("jr $ra");
+
     tables_stack.back().addEntry("printi", printi_func_params, NOTYPE);
+    //emit code for printi
+    codeBuffer::instance().emit("printi:");
+    codeBuffer::instance().emit("lw $a0,0($sp)");
+    codeBuffer::instance().emit("li $v0,1");
+    codeBuffer::instance().emit("syscall");
+    codeBuffer::instance().emit("jr $ra");
 }
 
 int main(){
