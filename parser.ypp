@@ -12,6 +12,7 @@
 #include "register_handler.h"
 #include "utils.h"
 #include "comparison_operators.h"
+#include "func_generation.h"
 
 extern int yylineno;
 
@@ -768,8 +769,7 @@ void addFuncScope(const std::string &ID, const std::vector<FormalStruct> &formal
         delete e;
     }
 
-    emitComment("CODE OF FUNCTION " + ID);
-    CodeBuffer::instance().emit(ID + ":");
+    emitFuncStart(ID);
     //add empty place for local variables
 }
 
