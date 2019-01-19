@@ -67,7 +67,7 @@ std::string genStrData(std::string str){
 
     std::string str_label = "str_" + numToString(++num_strings);
     CodeBuffer::instance().emitData(str_label + ":");
-    CodeBuffer::instance().emitData(str);
+    CodeBuffer::instance().emitData(".ascii "+str);
 
     string_labels[str] = str_label;
 
