@@ -57,3 +57,10 @@ int emitTerminate(){
     emit("li $v0, 10");
     return emit("syscall");
 }
+
+std::string genStrData(std::string str){
+    std::string str_label = "str_" + numToString(++num_strings);
+    CodeBuffer::instance().emitData(str_label + ":");
+    CodeBuffer::instance().emitData(str);
+    return str_label;
+}
