@@ -19,6 +19,7 @@ int emit(std::stringstream& str);
 // input is number of bytes that should be added
 int addPlaceInStack(int offset = 1);
 int removePlaceInStack(int offset = 1);
+int emitTerminate();
 
 int funcArgsTotOffset(std::vector<FuncParam> params, SymTable& table, std::vector<std::vector<StructType> >& structs_stack);
 
