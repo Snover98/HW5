@@ -883,8 +883,6 @@ void addPrints(){
 }
 
 int main(){
-    emit(".text");
-
     structs_stack = std::vector <std::vector<StructType> >();
     structs_stack.push_back(std::vector<StructType>());
 
