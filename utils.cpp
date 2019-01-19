@@ -31,6 +31,5 @@ int emit(std::stringstream& str){
 int addPlaceInStack(int offset){
     //convert offset to bytes
     offset *= 4;
-//    emitComment("adding place in stack with offset of " + numToString(offset) +" bytes");
     return emit("add $sp, $sp, (-" + numToString(offset) +")");
 }
