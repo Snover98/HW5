@@ -10,7 +10,7 @@
 #include "SymTable.h"
 #include "register_handler.h"
 
-//emit code for returning from a function
+//emit code for returning from a function, if reg_num == -1, this is for a function with no return value
 int emitReturn(int reg_num = -1);
 
 // emit label for function code + comments
