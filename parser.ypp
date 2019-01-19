@@ -870,7 +870,7 @@ void addPrints(){
     emit("li $v0,4");
     emit("syscall");
     emit("jr $ra");
-    emit("");
+    emitFuncEnd("print");
 
     tables_stack.back().addEntry("printi", printi_func_params, NOTYPE);
     //emit code for printi
@@ -879,10 +879,12 @@ void addPrints(){
     emit("li $v0,1");
     emit("syscall");
     emit("jr $ra");
-    emit("");
+    emitFuncEnd("printi");
 }
 
 int main(){
+    emit(".text");
+
     structs_stack = std::vector <std::vector<StructType> >();
     structs_stack.push_back(std::vector<StructType>());
 
