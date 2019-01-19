@@ -91,7 +91,7 @@ regHandler reg_handler = regHandler();
 %left <node> RPAREN
 %left <node> LPAREN
 
-%type <expression> RetType Type Exp BoolExp
+%type <expression> RetType Type Exp BoolExp Call
 %type <statement> Statement SimpleStatement Statements ClosedStatement OpenStatement Call
 %type <formals_list> FormalsList Formals
 %type <formal_struct> FormalDecl
