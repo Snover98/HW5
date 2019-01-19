@@ -16,6 +16,9 @@ int emitReturn(int reg_num = -1);
 // emit label for function code + comments
 int emitFuncStart(std::string &func_name);
 
+//emit ending of the function
+int emitFuncEnd(std::string &func_name);
+
 // setup function call BEFORE pushing arguments into the stack in order
 int emitSetupFuncCall(std::string &func_name, SymTable &table);
 
