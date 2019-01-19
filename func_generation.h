@@ -47,5 +47,13 @@ int emitLoadStructField(int reg_num, std::string &struct_name, std::string &fiel
 
 int emitSaveStructField(int reg_num, std::string &struct_name, std::string &field_name, SymTable &table, StructType &t);
 
+int emitLoadStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType &t);
+
+int emitSaveStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType &t);
+
+//function for struct1 = struct2
+int emitStructsEq(int offset1, int offset2, StructType& t, regHandler& r);
+
+int emitStructsEq(std::string &struct1, std::string &struct2, SymTable &table, StructType &t, regHandler &r);
 
 #endif //HW5_FUNC_GENERATION_H
