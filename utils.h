@@ -8,11 +8,23 @@
 #include <string>
 #include "bp.hpp"
 #include <sstream>
+#include "SymTable.h"
+#include <map>
 
+int num_strings = 0;
+std::map<std::string, std::string> string_labels;
 
-int emitComment(std::string& comment);
+int emitComment(std::string comment);
 int emitComment(std::stringstream& comment);
 std::string numToString(int num);
+int emit(std:: string str);
+int emit(std::stringstream& str);
+// input is number of bytes that should be added
+int addPlaceInStack(int offset = 1);
+int removePlaceInStack(int offset = 1);
+int emitTerminate();
 
+int funcArgsTotOffset(std::vector<FuncParam> params, SymTable& table, std::vector<std::vector<StructType> >& structs_stack);
+std::string strData(std::string str);
 
 #endif //HW5_UTILS_H

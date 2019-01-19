@@ -52,7 +52,8 @@ bool isStructTypeInTable(const std::vector<std::vector<StructType> > &structs_st
 
 StructType getStructTypeEntry(const std::vector<std::vector<StructType> > &structs_stack, const std::string &ID) {
     //look for an entry in each scope
-    for (std::vector<std::vector<StructType> >::const_iterator it = structs_stack.begin(); it != structs_stack.end(); ++it) {
+    for (std::vector<std::vector<StructType> >::const_iterator it = structs_stack.begin();
+         it != structs_stack.end(); ++it) {
         //look for the struct type in the current scope
         StructType res = getStructTypeEntry(*it, ID);
 
@@ -66,8 +67,8 @@ StructType getStructTypeEntry(const std::vector<std::vector<StructType> > &struc
     return StructType();
 }
 
-int StructType::fieldOffset(const std::string& field_name){
-    for(int i = 0; i < fields.size(); ++i) {
+int StructType::fieldOffset(const std::string &field_name) {
+    for (int i = 0; i < fields.size(); ++i) {
         if (field_name == fields[i].first) {
             return i;
         }
