@@ -11,6 +11,8 @@
 #include "bp.hpp"
 #include "register_handler.h"
 #include "utils.h"
+#include "comparison_operators.h"
+#include "utils.h"
 
 extern int yylineno;
 
@@ -621,7 +623,7 @@ Exp:                LPAREN Exp RPAREN {
                                     $$ = new Expression(BOOLEXP,-1);
 									CodeBuffer::instance().bpatch($1->truelist,$3->quad);
 									$$->truelist=$4->truelist;
-									$$->falselist=CodeBuffer::merge($1->falselist,$2->falselist);
+									$$->falselist=CodeBuffer::merge($1->falselist,$4->falselist);
 
                                   }
                     | Exp OR M Exp {
@@ -640,6 +642,8 @@ Exp:                LPAREN Exp RPAREN {
                                             exit(0);
                                         }
                                         $$ = new Expression(BOOLEXP,-1);
+										int loc = emit("j "); 
+										bpatch(makelist(loc),"my_label"); 
 										$$->truelist=CodeBuffer::instance().next();
 										$$->falselist=CodeBuffer::instance().next();
 										//TODO emit code computing the expression
