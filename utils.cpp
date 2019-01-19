@@ -33,3 +33,9 @@ int addPlaceInStack(int offset){
     offset *= 4;
     return emit("add $sp, $sp, (-" + numToString(offset) +")");
 }
+
+int removePlaceInStack(int offset){
+    //convert offset to bytes
+    offset *= 4;
+    return emit("add $sp, $sp, (" + numToString(offset) +")");
+}
