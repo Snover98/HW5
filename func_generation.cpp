@@ -52,6 +52,24 @@ int emitLoadRegisters(){
 }
 
 int emitPopReg(int reg_num){
-    emit("la " + regName(reg_num) +", ($sp)");
+    emit("lw " + regName(reg_num) +", ($sp)");
     return removePlaceInStack();
+}
+
+int emitLoadVar(int reg_num, int offset){
+    offset *= 4;
+    return emit("lw " + regName(reg_num) + ", " + numToString(-offset) + "($fp)");
+}
+
+int emitSaveVar(int reg_num, int offset){
+    offset *= 4;
+    return emit("sw " + regName(reg_num) + ", " + numToString(-offset) + "($fp)");
+}
+
+int emitLoadVar(int reg_num, std::string& ID, SymTable& table){
+    return emitLoadVar(reg_num, table.getSymbolEntry(ID).offset);
+}
+
+int emitSaveVar(int reg_num, std::string& ID, SymTable& table){
+    return emitSaveVar(reg_num, table.getSymbolEntry(ID).offset);
 }

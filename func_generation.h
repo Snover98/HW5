@@ -24,7 +24,13 @@ int emitPushReg(int reg_num);
 int emitLoadRegisters();
 //function for pooping a value into a register
 int emitPopReg(int reg_num);
-
+//load variable from stack into register, offset is in number of bytes
+int emitLoadVar(int reg_num, int offset);
+//save variable from register into stack, offset is in number of bytes
+int emitSaveVar(int reg_num, int offset);
+//load & save var with ID and symbol table
+int emitLoadVar(int reg_num, std::string& ID, SymTable& table);
+int emitSaveVar(int reg_num, std::string& ID, SymTable& table);
 
 
 #endif //HW5_FUNC_GENERATION_H
