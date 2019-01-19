@@ -24,6 +24,8 @@ set(SOURCE_FILES
         utils.cpp
         utils.h
         comparison_operators.h
-        comparison_operators.cpp)
+        comparison_operators.cpp
+        func_generation.cpp
+        func_generation.h)
 
 add_executable(HW5 ${SOURCE_FILES})
