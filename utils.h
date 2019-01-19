@@ -25,6 +25,6 @@ int removePlaceInStack(int offset = 1);
 int emitTerminate();
 
 int funcArgsTotOffset(std::vector<FuncParam> params, SymTable& table, std::vector<std::vector<StructType> >& structs_stack);
-std::string genStrData(std::string str);
+std::string strData(std::string str);
 
 #endif //HW5_UTILS_H

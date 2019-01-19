@@ -58,7 +58,7 @@ int emitTerminate(){
     return emit("syscall");
 }
 
-std::string genStrData(std::string str){
+std::string strData(std::string str){
     //if the string already exists, return the label
     std::map<std::string, std::string>::iterator it = string_labels.find(str);
     if(it != string_labels.end()){
