@@ -60,9 +60,8 @@ int emitTerminate(){
 
 std::string strData(std::string str){
     //if the string already exists, return the label
-    std::map<std::string, std::string>::iterator it = string_labels.find(str);
-    if(it != string_labels.end()){
-        return (*it).second;
+    if(string_labels.count(str) > 0){
+        return string_labels[str];
     }
 
     std::string str_label = "str_" + numToString(++num_strings);
