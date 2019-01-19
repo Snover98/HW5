@@ -56,4 +56,7 @@ int emitStructsEq(int offset1, int offset2, StructType& t, regHandler& r);
 
 int emitStructsEq(std::string &struct1, std::string &struct2, SymTable &table, StructType &t, regHandler &r);
 
+//done after setup & pushing arguments into stack
+int emitFuncCall(std::string func_name, SymTable& table, std::vector<std::vector<StructType> > &structs_stack);
+
 #endif //HW5_FUNC_GENERATION_H

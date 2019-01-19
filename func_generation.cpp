@@ -11,6 +11,8 @@ int emitFuncStart(std::string &func_name) {
 }
 
 int emitSetupFuncCall(std::string &func_name, SymTable &table) {
+    //make sure that $sp is correct
+    updateSPBeforeCall(func_name, table);
     //save all registers in stack
     emitComment("SAVING REGISTERS");
     emitSaveRegisters();
@@ -63,7 +65,8 @@ int emitLoadVar(int reg_num, int offset) {
 
 int emitSaveVar(int reg_num, int offset) {
     offset *= 4;
-    return emit("sw " + regName(reg_num) + ", " + numToString(-offset) + "($fp)");
+    emit("add " + regName(reg_num) + ", $fp, " + numToString(-offset));
+    return emit("sw " + regName(reg_num) + ", " + "(" + regName(reg_num) + ")");
 }
 
 int emitLoadVar(int reg_num, std::string &ID, SymTable &table) {
@@ -110,4 +113,22 @@ int emitStructsEq(int offset1, int offset2, StructType& t, regHandler& r){
 int emitStructsEq(std::string& struct1, std::string& struct2, SymTable& table, StructType& t, regHandler& r){
     emitComment("executing " + struct1 + " = " + struct2);
     return emitStructsEq(table.getSymbolEntry(struct1).offset, table.getSymbolEntry(struct2).offset, t, r);
+}
+
+int emitFuncCall(std::string func_name, SymTable& table, std::vector<std::vector<StructType> > &structs_stack){
+    //move frame pointer to new location
+    emit("move $fp, $sp");
+    //call func
+    emit("jal " + func_name);
+    //remove all func arguments from the stack
+    removePlaceInStack(funcArgsTotOffset(table.getSymbolEntry(func_name).func_type.first, table, structs_stack));
+
+    //pop $ra and $fp
+    emit("lw $ra, ($sp)");
+    removePlaceInStack();
+    emit("lw $fp, ($sp)");
+    removePlaceInStack();
+
+    //load all registers
+    return emitLoadRegisters();
 }
