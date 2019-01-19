@@ -67,9 +67,12 @@ int emitSaveVar(int reg_num, int offset){
 }
 
 int emitLoadVar(int reg_num, std::string& ID, SymTable& table){
+    emitComment("load the variable " + ID + "into the register " + regName(reg_num));
     return emitLoadVar(reg_num, table.getSymbolEntry(ID).offset);
 }
 
 int emitSaveVar(int reg_num, std::string& ID, SymTable& table){
+    emitComment("save the variable " + ID + "from the register " + regName(reg_num) + "into the stack");
     return emitSaveVar(reg_num, table.getSymbolEntry(ID).offset);
 }
+
