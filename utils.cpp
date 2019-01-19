@@ -12,20 +12,18 @@ std::string numToString(int num){
     return num_as_string;
 }
 
-int emitComment(std::string& comment){
-    return CodeBuffer::instance().emit("#" + comment);
+int emitComment(std::string comment){
+    return emit("#" + comment);
 }
 
 int emitComment(std::stringstream& comment){
-    std::string comment_string = std::string(comment.str());
-    return emitComment(comment_string);
+    return emitComment(comment.str());
 }
 
-int emit(std:: string& str){
+int emit(std:: string str){
     return CodeBuffer::instance().emit(str);
 }
 
 int emit(std::stringstream& str){
-    std::string actual_string = std::string(str.str());
-    return emit(actual_string);
+    return emit(str.str());
 }

@@ -10,10 +10,10 @@
 #include <sstream>
 
 
-int emitComment(std::string& comment);
+int emitComment(std::string comment);
 int emitComment(std::stringstream& comment);
 std::string numToString(int num);
-int emit(std:: string& str);
+int emit(std:: string str);
 int emit(std::stringstream& str);
 
 
