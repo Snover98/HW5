@@ -8,6 +8,7 @@
 #include <string>
 #include "bp.hpp"
 #include <sstream>
+#include "SymTable.h"
 
 
 int emitComment(std::string comment);
@@ -19,5 +20,6 @@ int emit(std::stringstream& str);
 int addPlaceInStack(int offset = 1);
 int removePlaceInStack(int offset = 1);
 
+int funcArgsTotOffset(std::vector<FuncParam> params, SymTable& table, std::vector<std::vector<StructType> >& structs_stack);
 
 #endif //HW5_UTILS_H
