@@ -84,7 +84,6 @@ int emitLoadStructField(int reg_num, std::string &struct_name, std::string &fiel
     return emitLoadStructField(reg_num, table.getSymbolEntry(struct_name).offset, field_name, table, t);
 }
 
-
 int emitSaveStructField(int reg_num, std::string &struct_name, std::string &field_name, SymTable &table, StructType &t) {
     emitComment("Save the value of the field " + struct_name + "." + field_name + "from " + regName(reg_num));
     return emitSaveStructField(reg_num, table.getSymbolEntry(struct_name).offset, field_name, table, t);
@@ -97,7 +96,6 @@ int emitLoadStructField(int reg_num, int offset, std::string &field_name, SymTab
 int emitSaveStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType &t){
     return emitLoadVar(reg_num, offset + t.fieldOffset(field_name));
 }
-
 
 int emitStructsEq(int offset1, int offset2, StructType& t, regHandler& r){
     int reg = r.getAvailableRegister();
@@ -135,6 +133,8 @@ int emitFuncCall(std::string func_name, SymTable& table, std::vector<std::vector
 
 int emitReturn(int reg_num){
     emitComment("return from function");
-    emit("move $v0, " + regName(reg_num));
+    if(reg_num != -1){
+        emit("move $v0, " + regName(reg_num));
+    }
     return emit("jr $ra");
 }
