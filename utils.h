@@ -9,8 +9,10 @@
 #include "bp.hpp"
 #include <sstream>
 #include "SymTable.h"
+#include <map>
 
 int num_strings = 0;
+std::map<std::string, std::string> string_labels;
 
 int emitComment(std::string comment);
 int emitComment(std::stringstream& comment);

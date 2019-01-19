@@ -59,8 +59,17 @@ int emitTerminate(){
 }
 
 std::string genStrData(std::string str){
+    //if the string already exists, return the label
+    std::map<std::string, std::string>::iterator it = string_labels.find(str);
+    if(it != string_labels.end()){
+        return (*it).second;
+    }
+
     std::string str_label = "str_" + numToString(++num_strings);
     CodeBuffer::instance().emitData(str_label + ":");
     CodeBuffer::instance().emitData(str);
+
+    string_labels[str] = str_label;
+
     return str_label;
 }
