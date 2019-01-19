@@ -10,6 +10,9 @@
 #include "SymTable.h"
 #include "register_handler.h"
 
+//emit code for returning from a function
+int emitReturn(int reg_num = -1);
+
 // emit label for function code + comments
 int emitFuncStart(std::string &func_name);
 

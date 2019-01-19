@@ -132,3 +132,9 @@ int emitFuncCall(std::string func_name, SymTable& table, std::vector<std::vector
     //load all registers
     return emitLoadRegisters();
 }
+
+int emitReturn(int reg_num){
+    emitComment("return from function");
+    emit("move $v0, " + regName(reg_num));
+    return emit("jr $ra");
+}
