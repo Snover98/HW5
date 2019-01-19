@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
 project(HW5)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 98)
 
 set(SOURCE_FILES
         bp.cpp
@@ -26,6 +26,8 @@ set(SOURCE_FILES
         comparison_operators.h
         comparison_operators.cpp
         func_generation.cpp
-        func_generation.h parser_code.cpp parser_code.h)
+        func_generation.h
+        parser_code.cpp
+        parser_code.h)
 
 add_executable(HW5 ${SOURCE_FILES})
