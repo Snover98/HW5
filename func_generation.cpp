@@ -5,14 +5,14 @@
 #include "func_generation.h"
 
 
-int emitFuncStart(std::string &func_name) {
+int emitFuncStart(std::string func_name) {
     emitComment("CODE OF FUNCTION " + func_name);
     emit(".globl " + func_name);
     emit(".ent " + func_name);
     return emit(func_name + ":");
 }
 
-int emitFuncEnd(std::string &func_name){
+int emitFuncEnd(std::string func_name){
     if(func_name == "main"){
         emitTerminate();
     }

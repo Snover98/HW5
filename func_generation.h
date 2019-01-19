@@ -14,16 +14,16 @@
 int emitReturn(int reg_num = -1);
 
 // emit label for function code + comments
-int emitFuncStart(std::string &func_name);
+int emitFuncStart(std::string func_name);
 
 //emit ending of the function
-int emitFuncEnd(std::string &func_name);
+int emitFuncEnd(std::string func_name);
 
 // setup function call BEFORE pushing arguments into the stack in order
-int emitSetupFuncCall(std::string &func_name, SymTable &table);
+int emitSetupFuncCall(std::string func_name, SymTable &table);
 
 // make sure $sp is the correct value before starting to push function arguments
-int updateSPBeforeCall(std::string &func_name, SymTable &table);
+int updateSPBeforeCall(std::string func_name, SymTable &table);
 
 // save all registers in stack
 int emitSaveRegisters();
