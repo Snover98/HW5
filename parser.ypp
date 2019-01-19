@@ -242,7 +242,7 @@ OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2
 									$$=new Statement();
 									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
 									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
-									$$->nextlist=$5->falselist;
+									$$->nextlist=CodeBuffer::merge($5->falselist,$9->breaklist);
 									CodeBuffer::instance().emit("j "+$3->quad);
 								}
 ;
@@ -260,7 +260,7 @@ ClosedStatement:    SimpleStatement
 									$$=new Statement();
 									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
 									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
-									$$->nextlist=$5->falselist;
+									$$->nextlist=CodeBuffer::merge($5->falselist,$9->breaklist);
 									CodeBuffer::instance().emit("j "+$3->quad);
 								}
 ;
@@ -377,12 +377,16 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                     output::errorUnexpectedBreak(yylineno);
                                     exit(0);
                                 }
+								$$->breaklist=CodeBuffer::makelist(CodeBuffer::instance().genlabel());
+								CodeBuffer::instance().emit("j ");
                                }
                     | CONTINUE SC {
                                     if(num_of_while_scopes == 0){
                                         output::errorUnexpectedContinue(yylineno);
                                         exit(0);
                                     }
+									$$->nextlist=CodeBuffer::makelist(CodeBuffer::instance().genlabel());
+									CodeBuffer::instance().emit("j ");
                                   }
 ;
 
@@ -455,20 +459,23 @@ ExpList:            Exp {
 
 Type:               INT {
                             //TODO why do we need a register for a type? they aren't actual expressions
+							//TODO - from the implementation of HW3: INT {$$ = new Expression(INTEXP);}
 							int reg=reg_handler.getAvailableRegister();
 							$$ = new Expression(INTEXP,reg);
 						}
                     | BYTE 
 						{
 						    //TODO why do we need a register for a type? they aren't actual expressions
+							//TODO - from the implementation of HW3: BYTE {$$ = new Expression(BYTEEXP);}
 							int reg=reg_handler.getAvailableRegister();
 							$$ = new Expression(BYTEEXP,reg);
 						}
-                    | BOOL {
+                    | BOOL 
+						{
                             //TODO why do we need a register for a type? they aren't actual expressions
-							int reg=reg_handler.getAvailableRegister();
-							$$ = new Expression(BOOLEXP,reg);
-							}
+							//TODO - from the implementation of HW3: BOOL {$$ = new Expression(BOOLEXP);}	
+							$$ = new Expression(BOOLEXP,-1);
+						}
 ;
 
 StructType:         STRUCT ID {

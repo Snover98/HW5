@@ -31,7 +31,8 @@ struct Expression : public Node {
 
 struct Statement : public  Node{
     std::vector<int> nextlist;
-    Statement() : Node() , nextlist() {}
+    std::vector<int> breaklist;
+    Statement() : Node() , nextlist() ,breaklist() {}
 };
 
 //struct for structures, string field is so we can know what kind of struct it is
