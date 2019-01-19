@@ -15,7 +15,8 @@ int emitComment(std::stringstream& comment);
 std::string numToString(int num);
 int emit(std:: string str);
 int emit(std::stringstream& str);
-
+// input is number of bytes that should be added
+int addPlaceInStack(int offset = 1);
 
 
 #endif //HW5_UTILS_H
