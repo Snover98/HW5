@@ -4,7 +4,6 @@ project(HW5)
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES
-        .gitignore
         bp.cpp
         bp.hpp
         Exceptions.h
@@ -17,6 +16,14 @@ set(SOURCE_FILES
         StructType.cpp
         StructType.h
         SymTable.cpp
-        SymTable.h binary_operators.h binary_operators.cpp register_handler.cpp register_handler.h utils.cpp utils.h)
+        SymTable.h
+        binary_operators.h
+        binary_operators.cpp
+        register_handler.cpp
+        register_handler.h
+        utils.cpp
+        utils.h
+        comparison_operators.h
+        comparison_operators.cpp)
 
 add_executable(HW5 ${SOURCE_FILES})

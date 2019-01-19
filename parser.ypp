@@ -11,6 +11,7 @@
 #include "bp.hpp"
 #include "register_handler.h"
 #include "utils.h"
+#include "comparison_operators.h"
 
 extern int yylineno;
 
