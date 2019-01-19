@@ -865,21 +865,21 @@ void addPrints(){
 
     tables_stack.back().addEntry("print", print_func_params, NOTYPE);
     //emit code for print
-    CodeBuffer::instance().emit("print:");
-    CodeBuffer::instance().emit("lw $a0,0($sp)");
-    CodeBuffer::instance().emit("li $v0,4");
-    CodeBuffer::instance().emit("syscall");
-    CodeBuffer::instance().emit("jr $ra");
-    CodeBuffer::instance().emit("");
+    emitFuncStart("print");
+    emit("lw $a0,0($sp)");
+    emit("li $v0,4");
+    emit("syscall");
+    emit("jr $ra");
+    emit("");
 
     tables_stack.back().addEntry("printi", printi_func_params, NOTYPE);
     //emit code for printi
-    CodeBuffer::instance().emit("printi:");
-    CodeBuffer::instance().emit("lw $a0,0($sp)");
-    CodeBuffer::instance().emit("li $v0,1");
-    CodeBuffer::instance().emit("syscall");
-    CodeBuffer::instance().emit("jr $ra");
-    CodeBuffer::instance().emit("");
+    emitFuncStart("printi");
+    emit("lw $a0,0($sp)");
+    emit("li $v0,1");
+    emit("syscall");
+    emit("jr $ra");
+    emit("");
 }
 
 int main(){
