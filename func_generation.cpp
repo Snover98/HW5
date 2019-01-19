@@ -20,7 +20,7 @@ int emitFuncEnd(std::string func_name){
     return emit("");
 }
 
-int emitSetupFuncCall(std::string &func_name, SymTable &table) {
+int emitSetupFuncCall(std::string func_name, SymTable &table) {
     //make sure that $sp is correct
     updateSPBeforeCall(func_name, table);
     //save all registers in stack
@@ -35,7 +35,7 @@ int emitSetupFuncCall(std::string &func_name, SymTable &table) {
     //after this the arguments should be put in the stack
 }
 
-int updateSPBeforeCall(std::string &func_name, SymTable &table) {
+int updateSPBeforeCall(std::string func_name, SymTable &table) {
     emitComment("update $sp according to the symbol table");
     return emit("add $sp, $fp, (-" + numToString(table.nextOffset()) + ")");
 }
