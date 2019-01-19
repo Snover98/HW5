@@ -453,11 +453,13 @@ Call:               ID LPAREN ExpList RPAREN {
 ;
 
 ExpList:            Exp {
+                            //TODO save computed expression in correct place in stack, make sure to take care of booleans
                             $$ = new ExpressionList();
                             $$->expressions.push_back(expressionToList($1));
                             delete $1;
                         }
                     | Exp COMMA ExpList {
+                                            //TODO save computed expression in correct place in stack, make sure to take care of booleans
                                             $$ = $3;
                                             $$->expressions.insert($$->expressions.begin(), expressionToList($1));
                                             delete $1;
@@ -471,10 +473,12 @@ Type:               INT {
 						}
                     | BYTE 
 						{
+						    //TODO why do we need a register for a type? they aren't actual expressions
 							int reg=reg_handler.getAvailableRegister();
 							$$ = new Expression(BYTEEXP,reg);
 						}
                     | BOOL {
+                            //TODO why do we need a register for a type? they aren't actual expressions
 							int reg=reg_handler.getAvailableRegister();
 							$$ = new Expression(BOOLEXP,reg);
 							}
@@ -500,6 +504,8 @@ Exp:                LPAREN Exp RPAREN {
                                             exit(0);
                                         }
                                         $$ = new Expression((operatorType($1, $3)),$1->used_register);
+
+                                        //TODO if is div, check divide by zero error
 
                                         //emit code computing the expression
                                         CodeBuffer::instance().emit(operatorString($1, $3, $2->BINOP, reg_handler));
@@ -583,12 +589,14 @@ Exp:                LPAREN Exp RPAREN {
                                     output::errorByteTooLarge(yylineno, val_str);
                                     exit(0);
                                 }
+
+                                //if(strtol(val_str.c_str(), NULL, 10) < 0){
+                                    //TODO: make sure the number is positive
+                                //}
 								$$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
 								string reg=numToString($$->used_register+8);
 								CodeBuffer::instance().emit("li $"+reg+","+($1->value));
-								//if($1->value<0){
-									//TODO: make sure the number is unsigned
-								//}
+
                                 delete $1;
                             }
                     | STRING{                          
@@ -613,6 +621,8 @@ Exp:                LPAREN Exp RPAREN {
                                 $$ = new Expression(BOOLEXP,-1);
 								$$->truelist=$2->falselist;
 								$$->falselist=$2->truelist;
+								//TODO emit code computing the expression
+
                                 delete $2;
                               }
                     | Exp AND M Exp {
@@ -624,6 +634,7 @@ Exp:                LPAREN Exp RPAREN {
 									CodeBuffer::instance().bpatch($1->truelist,$3->quad);
 									$$->truelist=$4->truelist;
 									$$->falselist=CodeBuffer::merge($1->falselist,$2->falselist);
+									//TODO emit code computing the expression
 
                                   }
                     | Exp OR M Exp {
@@ -635,6 +646,8 @@ Exp:                LPAREN Exp RPAREN {
 									CodeBuffer::instance().bpatch($1->falselist,$3->quad);
 									$$->falselist = $4->falselist;
 									$$->truelist = CodeBuffer::merge($1->truelist, $4->truelist);
+									//TODO emit code computing the expression
+
                                  }
                     | Exp RELOP Exp {
                                         if(!isNumExp($1) || !isNumExp($3)){
