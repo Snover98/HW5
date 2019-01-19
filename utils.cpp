@@ -20,3 +20,12 @@ int emitComment(std::stringstream& comment){
     std::string comment_string = std::string(comment.str());
     return emitComment(comment_string);
 }
+
+int emit(std:: string& str){
+    return CodeBuffer::instance().emit(str);
+}
+
+int emit(std::stringstream& str){
+    std::string actual_string = std::string(str.str());
+    return emit(actual_string);
+}
