@@ -32,5 +32,5 @@ int addPlaceInStack(int offset){
     //convert offset to bytes
     offset *= 4;
 //    emitComment("adding place in stack with offset of " + numToString(offset) +" bytes");
-    return emit("addiu $sp, (-" + numToString(offset) +")");
+    return emit("add $sp, $sp, (-" + numToString(offset) +")");
 }
