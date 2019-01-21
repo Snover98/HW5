@@ -82,7 +82,7 @@ void checkID(std::string& ID);
 %type <struct_memory> StructMem
 %type <expression_list> ExpList
 %type <structure> StructType
-%type <m> M
+%type <m> M, WM
 %type <n> N
 
 
@@ -222,7 +222,7 @@ OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2
 									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist, 
 											$9->nextlist),$13->nextlist);
 								}
-                    | WHILE M1 M LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2
+                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2
 								{
 									$$=new Statement();
 									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
@@ -240,7 +240,7 @@ ClosedStatement:    SimpleStatement
 									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
 									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist,$9->nextlist),$13->nextlist);
 								}
-                    | WHILE M1 M LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2
+                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2
 								{
 									$$=new Statement();
 									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
@@ -361,8 +361,13 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                     output::errorUnexpectedBreak(yylineno);
                                     exit(0);
                                 }
-								$$->breaklist=CodeBuffer::makelist(CodeBuffer::instance().genlabel());
-								CodeBuffer::instance().emit("j ");
+								$$->breaklist=CodeBuffer::makelist(emit("j "));
+
+								if(!break_lists.back().empty()){
+								    $$->breaklist = CodeBuffer::merge(break_lists.back(), $$->breaklist);
+								}
+                                break_lists.pop_back();
+                                break_lists.push_back($$->breaklist);
                                }
                     | CONTINUE SC {
                                     if(num_of_while_scopes == 0){
@@ -370,7 +375,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                         exit(0);
                                     }
 									$$->nextlist=CodeBuffer::makelist(CodeBuffer::instance().genlabel());
-									CodeBuffer::instance().emit("j ");
+									CodeBuffer::instance().emit("j " + while_start_labels.back());
                                   }
 ;
 
@@ -668,6 +673,12 @@ BoolExp:            Exp {
 							$$=new Expression(BOOLEXP,-1);
                         }
 ;
+
+WM:                     {
+                            $$ = new M();
+                            $$->quad=CodeBuffer::instance().genLabel();
+                            while_start_labels.push_back($$->quad);
+                        }
 
 M:					/*epsilon*/
 						{

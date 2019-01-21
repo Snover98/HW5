@@ -182,7 +182,6 @@ ExpType varToExp(VarType t){
 
 void M3Code(std::string bool_exp_label){
     ++num_of_while_scopes;
-    while_start_labels.push_back(CodeBuffer::instance().genLabel());
     break_lists.push_back(std::vector<int>());
 }
 
