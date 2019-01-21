@@ -876,7 +876,7 @@ void addPrints(){
 void popScope(){
     std::vector<SymEntry> scope_entries = tables_stack.back().scope_entries;
 
-    output::endScope();
+    //output::endScope();
 
     for(std::vector<SymEntry>::iterator it = scope_entries.begin(); it != scope_entries.end(); ++it){
         std::string type;
@@ -887,7 +887,7 @@ void popScope(){
             type = typeToString((*it).type) + (((*it).type == STRUCTTYPE) ? (" " + (*it).struct_type) : "");
         }
 
-        output::printID((*it).ID, (*it).offset, type);
+        //output::printID((*it).ID, (*it).offset, type);
     }
 
     std::vector<StructType> scope_structs = structs_stack.back();
@@ -901,7 +901,7 @@ void popScope(){
             memNames.push_back((*field_it).first);
         }
 
-        output::printStructType((*it).type_name, memTypes, memNames);
+        //output::printStructType((*it).type_name, memTypes, memNames);
     }
 
     tables_stack.pop_back();
