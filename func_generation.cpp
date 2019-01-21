@@ -190,7 +190,7 @@ int pushExp(Expression* exp, regHandler& r, std::vector<std::vector<StructType> 
             //push the field
             first_command = std::min(first_command, emitPushReg(exp->used_register));
             //move to the next field
-            emit("add " + regName(exp->used_register) + ", " + regName(exp->used_register) + ", -4");
+            emit("addu " + regName(exp->used_register) + ", " + regName(exp->used_register) + ", -4");
         }
     } else {
         // save the register's value in the stack
