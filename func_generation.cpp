@@ -89,7 +89,13 @@ int emitSaveVar(int reg_num, int offset) {
 
 int emitLoadVar(int reg_num, std::string &ID, SymTable &table) {
     emitComment("load the variable " + ID + "into the register " + regName(reg_num));
-    return emitLoadVar(reg_num, table.getSymbolEntry(ID).offset);
+
+    //in case of a struct, load it's loction in the stack
+    if(table.getSymbolEntry(ID).type == STRUCTTYPE){
+        return emit("add " + regName(reg_num) + ", $sp, " + numToString(-table.getSymbolEntry(ID).offset));
+    } else {
+        return emitLoadVar(reg_num, table.getSymbolEntry(ID).offset);
+    }
 }
 
 int emitSaveVar(int reg_num, std::string &ID, SymTable &table) {
