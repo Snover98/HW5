@@ -92,7 +92,7 @@ int emitLoadVar(int reg_num, std::string &ID, SymTable &table) {
 
     //in case of a struct, load it's loction in the stack
     if(table.getSymbolEntry(ID).type == STRUCTTYPE){
-        return emit("add " + regName(reg_num) + ", $sp, " + numToString(-table.getSymbolEntry(ID).offset));
+        return emit("add " + regName(reg_num) + ", $fp, " + numToString(-table.getSymbolEntry(ID).offset));
     } else {
         return emitLoadVar(reg_num, table.getSymbolEntry(ID).offset);
     }
