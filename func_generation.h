@@ -31,6 +31,9 @@ int emitSaveRegisters(regHandler &r);
 // function for pushing value in the register into the stack
 int emitPushReg(int reg_num);
 
+// function for pushing an expression into the stack
+int pushExp(Expression* exp, regHandler& r, std::vector<std::vector<StructType> > &structs_stack);
+
 //function for popping registers from stack
 int emitLoadRegisters(regHandler &r);
 

@@ -165,3 +165,29 @@ int emitReturn(int reg_num) {
     first_command = std::min(first_command, emit("jr $ra"));
     return first_command;
 }
+
+int pushExp(Expression* exp, regHandler& r, std::vector<std::vector<StructType> > &structs_stack){
+    int first_command = INT_MAX;
+    //if we need to put the expression in a register
+    if(exp->used_register == -1 && exp->exp_type == BOOLEXP){
+        first_command = emitSaveBoolRes(exp, getExpReg(exp, r));
+    }
+
+    //if it's a struct, we should push it's entirety
+    if(exp->exp_type == STRUCTEXP){
+        StructType t = getStructTypeEntry(structs_stack, ((Structure*)exp)->struct_type);
+        emitComment("Pushing Structure into stack");
+        //for each field
+        for(int i=0; i<t.fields.size(); ++i){
+            //push the field
+            first_command = std::min(first_command, emitPushReg(exp->used_register));
+            //move to the next field
+            emit("add " + regName(exp->used_register) + ", " + regName(exp->used_register) + ", -4");
+        }
+    } else {
+        // save the register's value in the stack
+        first_command = std::min(first_command, emitPushReg(exp->used_register));
+    }
+
+    return first_command;
+}
