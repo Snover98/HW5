@@ -546,29 +546,20 @@ Exp:                LPAREN Exp RPAREN {
                             } else {
                                 $$ = new Expression((varToExp(e.type)),-1);
                             }
-							//check if this is a boolean expression 
+
+							int reg=reg_handler.getAvailableRegister();
+                            //load value into register
+                            emitLoadVar(reg, $1->ID, tables_stack);
+
+							//check if this is a boolean expression
 							if ($$->exp_type==BOOLEXP){
-								//TODO: DO THIS WITH THE FUNCTION DEFINED OUTSIDE
-								int reg=reg_handler.getAvailableRegister();
-								string reg_as_string =reg_handler.regName(reg);
-								int offset; //TODO: get ID's offest in the stack
-								string offset_str = utils.numToString(offset);
-								stringstream command = "add $" << reg_as_string << ",$" << reg_as_string <<",$fp";
-								utils.emit(command);
-								command="lw $" << reg_as_string << "," << offset_str;
-								utils.emit(command);
+								$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("beq " + regName(reg) + ", 0"));
 								$$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
-								$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("beq $0, $" + reg_as_string + ","));
 								reg_handler.freeRegister(reg);
 							}
 							//if it isn't a boolean expression then just save the value in a register;
 							else{
-								$$->used_register = reg_handler.getAvailableRegister();
-								string reg=reg_handler.regName(reg);
-								int offset; //TODO: get ID's offest in the stack
-								string offset_str = utils.numToString(offset);
-								CodeBuffer::instance().emit("addu $"+reg+",$"+reg+",$fp");
-								CodeBuffer::instance().emit("lw $"+reg+","+offset_str);
+								$$->used_register = reg;
 							}
                          }
                     | ID PERIOD ID {
@@ -592,7 +583,17 @@ Exp:                LPAREN Exp RPAREN {
                                             exit(0);
                                         }
 										int reg = reg_handler.getAvailableRegister();
-										//TODO add code for loading value into the register
+										//load value into register
+                                        emitLoadStructField(reg, $1->ID, ,$2->ID, tables_stack, t);
+
+                                        //check if this is a boolean expression
+                                        if ($$->exp_type==BOOLEXP){
+                                            $$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("beq " + regName(reg) + ", 0"));
+                                            $$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+                                            reg_handler.freeRegister(reg);
+                                            reg = -1;
+                                        }
+                                        //if it isn't a boolean expression then just save the value in a register;
 
                                         $$ = new Expression((varToExp(field_type)),reg);
                                         delete $1;
