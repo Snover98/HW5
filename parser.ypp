@@ -451,6 +451,8 @@ ExpList:            Exp {
 
                             //push the expression value
                             pushExp($1, reg_handler, structs_stack);
+                            //free the register
+                            reg_handler.freeRegister($1->used_register);
 
                             delete $1;
                         }
@@ -460,6 +462,8 @@ ExpList:            Exp {
 
                                             //push the expression value
                                             pushExp($1, reg_handler, structs_stack);
+                                            //free the register
+                                            reg_handler.freeRegister($1->used_register);
 
                                             delete $1;
                                         }
