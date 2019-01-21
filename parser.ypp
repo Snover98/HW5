@@ -22,10 +22,6 @@ void yyerror(const char*);
 
 //func that checks if an ID is already defined
 void checkID(std::string& ID);
-
-regHandler reg_handler = regHandler();
-
-
 %}
 
 %union{
