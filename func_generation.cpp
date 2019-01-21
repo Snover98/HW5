@@ -57,7 +57,7 @@ int emitSaveRegisters(regHandler &r) {
 int emitPushReg(int reg_num, Expression* e) {
     int first_command = addPlaceInStack();
 
-    if(e != NULL){
+    if(e != NULL && e->exp_type == BOOLEXP){
         emitSaveBoolRes(e, reg_num);
     }
 
