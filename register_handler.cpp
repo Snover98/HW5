@@ -33,6 +33,6 @@ std::string regName(int i){
     return s.str();
 }
 
-bool regHandler::isFree(int i){
+bool regHandler::isTaken(int i){
     return available_registers[i];
 }
