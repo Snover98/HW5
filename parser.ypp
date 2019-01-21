@@ -602,9 +602,7 @@ Exp:                LPAREN Exp RPAREN {
                     | Call {$$ = $1;}
                     | NUM {
                             $$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
-							string num_as_string = $1->value;
-							string reg = reg_handler.regName($$->used_register);
-							CodeBuffer::instance().emit("li $"+reg+","+num_as_string);
+							emit("li $" + regName($$->used_register) + ", " + $1->value);
                           }
                     | NUM B {
 								string val_str = $1->value;
@@ -617,8 +615,7 @@ Exp:                LPAREN Exp RPAREN {
                                     //TODO: make sure the number is positive
                                 //}
 								$$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
-								string reg = reg_handler.regName($$->used_register);
-								CodeBuffer::instance().emit("li $"+reg+","+($1->value));
+								emit("li "+regName($$->used_register)+", "+$1->value);
 
                                 delete $1;
                             }
@@ -629,11 +626,11 @@ Exp:                LPAREN Exp RPAREN {
 							}
                     | TRUE  {
 								$$ = new Expression(BOOLEXP,-1);
-								$$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+								$$->truelist=CodeBuffer::makelist(emit("j "));
 							}
                     | FALSE {
 								$$ = new Expression(BOOLEXP,-1);
-								$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+								$$->falselist=CodeBuffer::makelist(emit("j "));
 							}
                     | NOT Exp {
                                 if($2->exp_type != BOOLEXP){
@@ -678,13 +675,13 @@ Exp:                LPAREN Exp RPAREN {
                                         }
                                         $$ = new Expression(BOOLEXP,-1);
 										int loc = emit("j ");
-										bpatch(makelist(loc),"my_label");
+										CodeBuffer::instance().bpatch(CodeBuffer::makelist(loc),"my_label");
 										$$->truelist=CodeBuffer::instance().genLabel();
 										$$->falselist=CodeBuffer::instance().genLabel();
 										//TODO emit code computing the expression
 
-                                        $$->truelist=CodeBuffer::makelist(CodeBuffer::instance().emit(relopString($1, $3, $2->op, reg_handler)));										
-										$$->falselist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+                                        $$->truelist=CodeBuffer::makelist(emit(relopString($1, $3, $2->op, reg_handler)));
+                                        $$->falselist=CodeBuffer::makelist(emit("j "));
 									 }
 ;
 
