@@ -54,8 +54,9 @@ int funcArgsTotOffset(std::vector<FuncParam> params, SymTable &table,
 }
 
 int emitTerminate(){
-    emit("li $v0, 10");
-    return emit("syscall");
+    int first_command = emit("li $v0, 10");
+    emit("syscall");
+    return first_command;
 }
 
 std::string strData(std::string str){

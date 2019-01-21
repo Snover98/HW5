@@ -3,6 +3,7 @@
 //
 
 #include "func_generation.h"
+#include <limits.h>
 
 
 int emitFuncStart(std::string func_name) {
@@ -13,16 +14,18 @@ int emitFuncStart(std::string func_name) {
 }
 
 int emitFuncEnd(std::string func_name){
+    int first_command = INT_MAX;
     if(func_name == "main"){
-        emitTerminate();
+        first_command = emitTerminate();
     }
-    emit(".end " + func_name);
-    return emit("");
+    first_command = std::min(first_command, emit(".end " + func_name));
+    emit("");
+    return first_command;
 }
 
 int emitSetupFuncCall(std::string func_name, SymTable &table) {
     //make sure that $sp is correct
-    updateSPBeforeCall(func_name, table);
+    int first_command = updateSPBeforeCall(func_name, table);
     //save all registers in stack
     emitComment("SAVING REGISTERS");
     emitSaveRegisters();
@@ -31,41 +34,46 @@ int emitSetupFuncCall(std::string func_name, SymTable &table) {
     addPlaceInStack();
     emit("sw $fp, ($sp)");
     addPlaceInStack();
-    return emit("sw $ra, ($sp)");
+    emit("sw $ra, ($sp)");
+
+    return first_command;
     //after this the arguments should be put in the stack
 }
 
 int updateSPBeforeCall(std::string func_name, SymTable &table) {
-    emitComment("update $sp according to the symbol table");
-    return emit("add $sp, $fp, (-" + numToString(table.nextOffset()) + ")");
+    int first_command = emitComment("update $sp according to the symbol table");
+    emit("add $sp, $fp, (-" + numToString(table.nextOffset()) + ")");
+    return first_command;
 }
 
 int emitSaveRegisters() {
-    int last_command = -1;
+    int first_command = INT_MAX;
     for (int i = 0; i < NUM_OF_REGISTERS; ++i) {
-        last_command = emitPushReg(i);
+        first_command = std::min(first_command, emitPushReg(i));
     }
 
-    return last_command;
+    return first_command;
 }
 
 int emitPushReg(int reg_num) {
-    addPlaceInStack();
-    return emit("sw " + regName(reg_num) + ", ($sp)");
+    int first_command = addPlaceInStack();
+    emit("sw " + regName(reg_num) + ", ($sp)");
+    return first_command;
 }
 
 int emitLoadRegisters() {
-    int last_command = -1;
+    int first_command = INT_MAX;
     for (int i = NUM_OF_REGISTERS - 1; i >= 0; --i) {
-        last_command = emitPopReg(i);
+        first_command = std::min(first_command, emitPopReg(i));
     }
 
-    return last_command;
+    return first_command;
 }
 
 int emitPopReg(int reg_num) {
-    emit("lw " + regName(reg_num) + ", ($sp)");
-    return removePlaceInStack();
+    int first_command = emit("lw " + regName(reg_num) + ", ($sp)");
+    removePlaceInStack();
+    return first_command;
 }
 
 int emitLoadVar(int reg_num, int offset) {
@@ -75,8 +83,9 @@ int emitLoadVar(int reg_num, int offset) {
 
 int emitSaveVar(int reg_num, int offset) {
     offset *= 4;
-    emit("add " + regName(reg_num) + ", $fp, " + numToString(-offset));
-    return emit("sw " + regName(reg_num) + ", " + "(" + regName(reg_num) + ")");
+    int first_command = emit("add " + regName(reg_num) + ", $fp, " + numToString(-offset));
+    emit("sw " + regName(reg_num) + ", " + "(" + regName(reg_num) + ")");
+    return first_command;
 }
 
 int emitLoadVar(int reg_num, std::string &ID, SymTable &table) {
@@ -109,13 +118,13 @@ int emitSaveStructField(int reg_num, int offset, std::string &field_name, SymTab
 
 int emitStructsEq(int offset1, int offset2, StructType& t, regHandler& r){
     int reg = r.getAvailableRegister();
-    int last_command = -1;
+    int first_command = INT_MAX;
     for(int i=0; i < t.fields.size(); ++i){
-        emitSaveVar(reg, i + offset2);
-        last_command = emitLoadVar(reg, i + offset1);
+        first_command = std::min(first_command, emitSaveVar(reg, i + offset2));
+        emitLoadVar(reg, i + offset1);
     }
 
-    return last_command;
+    return first_command;
 }
 
 int emitStructsEq(std::string& struct1, std::string& struct2, SymTable& table, StructType& t, regHandler& r){
@@ -125,7 +134,7 @@ int emitStructsEq(std::string& struct1, std::string& struct2, SymTable& table, S
 
 int emitFuncCall(std::string func_name, SymTable& table, std::vector<std::vector<StructType> > &structs_stack){
     //move frame pointer to new location
-    emit("move $fp, $sp");
+    int first_command = emit("move $fp, $sp");
     //call func
     emit("jal " + func_name);
     //remove all func arguments from the stack
@@ -138,13 +147,17 @@ int emitFuncCall(std::string func_name, SymTable& table, std::vector<std::vector
     removePlaceInStack();
 
     //load all registers
-    return emitLoadRegisters();
+    emitLoadRegisters();
+
+    return first_command;
 }
 
 int emitReturn(int reg_num){
+    int first_command = INT_MAX;
     emitComment("return from function");
     if(reg_num != -1){
-        emit("move $v0, " + regName(reg_num));
+        first_command = emit("move $v0, " + regName(reg_num));
     }
-    return emit("jr $ra");
+    first_command = std::min(first_command, emit("jr $ra"));
+    return first_command;
 }
