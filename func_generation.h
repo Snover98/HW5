@@ -20,19 +20,19 @@ int emitFuncStart(std::string func_name);
 int emitFuncEnd(std::string func_name);
 
 // setup function call BEFORE pushing arguments into the stack in order
-int emitSetupFuncCall(std::string func_name, SymTable &table);
+int emitSetupFuncCall(std::string func_name, SymTable &table, regHandler &r);
 
 // make sure $sp is the correct value before starting to push function arguments
 int updateSPBeforeCall(std::string func_name, SymTable &table);
 
 // save all registers in stack
-int emitSaveRegisters();
+int emitSaveRegisters(regHandler &r);
 
 // function for pushing value in the register into the stack
 int emitPushReg(int reg_num);
 
 //function for popping registers from stack
-int emitLoadRegisters();
+int emitLoadRegisters(regHandler &r);
 
 //function for pooping a value into a register
 int emitPopReg(int reg_num);
@@ -58,11 +58,12 @@ int emitLoadStructField(int reg_num, int offset, std::string &field_name, SymTab
 int emitSaveStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType &t);
 
 //function for struct1 = struct2
-int emitStructsEq(int offset1, int offset2, StructType& t, regHandler& r);
+int emitStructsEq(int offset1, int offset2, StructType &t, regHandler &r);
 
 int emitStructsEq(std::string &struct1, std::string &struct2, SymTable &table, StructType &t, regHandler &r);
 
 //done after setup & pushing arguments into stack
-int emitFuncCall(std::string func_name, SymTable& table, std::vector<std::vector<StructType> > &structs_stack);
+int emitFuncCall(std::string func_name, SymTable &table, std::vector<std::vector<StructType> > &structs_stack,
+                 regHandler &r);
 
 #endif //HW5_FUNC_GENERATION_H
