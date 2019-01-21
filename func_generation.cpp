@@ -54,8 +54,13 @@ int emitSaveRegisters(regHandler &r) {
     return first_command;
 }
 
-int emitPushReg(int reg_num) {
+int emitPushReg(int reg_num, Expression* e) {
     int first_command = addPlaceInStack();
+
+    if(e != NULL){
+        emitSaveBoolRes(e, reg_num);
+    }
+
     emit("sw " + regName(reg_num) + ", ($sp)");
     return first_command;
 }
