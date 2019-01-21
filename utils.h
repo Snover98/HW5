@@ -10,6 +10,7 @@
 #include <sstream>
 #include "SymTable.h"
 #include <map>
+#include <register_handler.h>
 
 int num_strings = 0;
 std::map<std::string, std::string> string_labels;
@@ -23,6 +24,9 @@ int emit(std::stringstream& str);
 int addPlaceInStack(int offset = 1);
 int removePlaceInStack(int offset = 1);
 int emitTerminate();
+int emitDivByZeroCheck(int reg, std::string& handler_label);
+//returns the label of the handler
+std::string emitDivByZeroHandler();
 
 int funcArgsTotOffset(std::vector<FuncParam> params, SymTable& table, std::vector<std::vector<StructType> >& structs_stack);
 std::string strData(std::string str);
