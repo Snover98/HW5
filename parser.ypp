@@ -674,14 +674,13 @@ Exp:                LPAREN Exp RPAREN {
                                             exit(0);
                                         }
                                         $$ = new Expression(BOOLEXP,-1);
-										int loc = emit("j ");
-										CodeBuffer::instance().bpatch(CodeBuffer::makelist(loc),"my_label");
-										$$->truelist=CodeBuffer::instance().genLabel();
-										$$->falselist=CodeBuffer::instance().genLabel();
-										//TODO emit code computing the expression
 
-                                        $$->truelist=CodeBuffer::makelist(emit(relopString($1, $3, $2->op, reg_handler)));
+                                        //code generation
+                                        $$->truelist=CodeBuffer::makelist(emit(relopString($1, $3, $2->op)));
                                         $$->falselist=CodeBuffer::makelist(emit("j "));
+                                        //free registers
+                                        reg_handler.freeRegister($1->used_register);
+                                        reg_handler.freeRegister($3->used_register);
 									 }
 ;
 
