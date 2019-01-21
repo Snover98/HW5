@@ -41,9 +41,8 @@ int emitSetupFuncCall(std::string func_name, SymTable &table) {
 }
 
 int updateSPBeforeCall(std::string func_name, SymTable &table) {
-    int first_command = emitComment("update $sp according to the symbol table");
-    emit("add $sp, $fp, (-" + numToString(table.nextOffset()) + ")");
-    return first_command;
+    emitComment("update $sp according to the symbol table");
+    return emit("add $sp, $fp, (-" + numToString(table.nextOffset()) + ")");
 }
 
 int emitSaveRegisters() {
