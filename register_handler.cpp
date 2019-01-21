@@ -32,3 +32,7 @@ std::string regName(int i){
     s << '$' << i+8;
     return s.str();
 }
+
+bool regHandler::isFree(int i){
+    return available_registers[i];
+}

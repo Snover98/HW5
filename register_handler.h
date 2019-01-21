@@ -21,6 +21,8 @@ public:
     int getAvailableRegister();
     //frees register num i
     void freeRegister(int i);
+    //tells you if a register is taken
+    bool isFree(int i);
 };
 
 //return register name
