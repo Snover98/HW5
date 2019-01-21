@@ -94,7 +94,7 @@ int emitLoadVar(int reg_num, std::string &ID, SymTable &table) {
 
     //in case of a struct, load it's loction in the stack
     if(table.getSymbolEntry(ID).type == STRUCTTYPE){
-        return emit("addu " + regName(reg_num) + ", $fp, " + numToString(-table.getSymbolEntry(ID).offset));
+        return emit("lw " + regName(reg_num) + ", " + numToString(-table.getSymbolEntry(ID).offset));
     } else {
         return emitLoadVar(reg_num, table.getSymbolEntry(ID).offset);
     }
@@ -125,20 +125,24 @@ int emitSaveStructField(int reg_num, int offset, std::string &field_name, SymTab
     return emitLoadVar(reg_num, offset + t.fieldOffset(field_name));
 }
 
-int emitStructsEq(int offset1, int offset2, StructType &t, regHandler &r) {
+int emitStructsEq(int offset1, int reg2, StructType &t, regHandler &r) {
     int reg = r.getAvailableRegister();
     int first_command = INT_MAX;
     for (int i = 0; i < t.fields.size(); ++i) {
-        first_command = std::min(first_command, emitSaveVar(reg, i + offset2));
+        first_command = std::min(first_command, emit("addu " + regName(reg) + ", $fp, " + regName(reg2)));
+        emit("addu +" + regName(reg)+ ", " + numToString(-i*4));
+        emit("lw " + regName(reg) + ", " + regName(reg));
         emitLoadVar(reg, i + offset1);
     }
+
+    r.freeRegister(reg);
 
     return first_command;
 }
 
-int emitStructsEq(std::string &struct1, std::string &struct2, SymTable &table, StructType &t, regHandler &r) {
-    emitComment("executing " + struct1 + " = " + struct2);
-    return emitStructsEq(table.getSymbolEntry(struct1).offset, table.getSymbolEntry(struct2).offset, t, r);
+int emitStructsEq(std::string &struct1, int reg2, SymTable &table, StructType &t, regHandler &r) {
+    emitComment("executing " + struct1 + " =  EXP");
+    return emitStructsEq(table.getSymbolEntry(struct1).offset, reg2, t, r);
 }
 
 int emitFuncCall(std::string func_name, SymTable &table, std::vector<std::vector<StructType> > &structs_stack,

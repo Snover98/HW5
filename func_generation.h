@@ -61,9 +61,9 @@ int emitLoadStructField(int reg_num, int offset, std::string &field_name, SymTab
 int emitSaveStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType &t);
 
 //function for struct1 = struct2
-int emitStructsEq(int offset1, int offset2, StructType &t, regHandler &r);
+int emitStructsEq(int offset1, int reg2, StructType &t, regHandler &r);
 
-int emitStructsEq(std::string &struct1, std::string &struct2, SymTable &table, StructType &t, regHandler &r);
+int emitStructsEq(std::string &struct1, int reg2, SymTable &table, StructType &t, regHandler &r);
 
 //done after setup & pushing arguments into stack
 int emitFuncCall(std::string func_name, SymTable &table, std::vector<std::vector<StructType> > &structs_stack,
