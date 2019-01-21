@@ -701,7 +701,8 @@ M4:                 {--num_of_while_scopes;}
 %%
 
 int main(){
-    reg_handler = regHandler()
+    reg_handler = regHandler();
+    div_by_zero_label = emitDivByZeroHandler();
 
     structs_stack = std::vector <std::vector<StructType> >();
     structs_stack.push_back(std::vector<StructType>());

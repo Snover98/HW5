@@ -51,5 +51,7 @@ ExpType cur_ret_type = VOIDEXP;
 
 regHandler reg_handler;
 
+std::string div_by_zero_label;
+
 
 #endif //HW5_PARSER_CODE_H
