@@ -21,43 +21,10 @@
 #include "func_generation.h"
 
 
-//functions for enum type conversions
-ExpType varToExp(VarType t);
-VarType expToVar(ExpType e);
-
-//functions for creating new scopes
-void addEmptyScope();
-void addFuncScope(const std::string &ID, const std::vector<FormalStruct> &formals, ExpType ret_type);
-//function for removing scope
-void popScope();
-//function for type -> string conversion
-std::string typeToString(VarType type);
-//function for function -> string conversion
-std::string funcToString(FunctionType &func_type);
-//get function argument types vector as string
-std::vector<std::string> funcArgTypes(FunctionType &func_type);
-//func that adds print and printi to the symbol table
-void addPrints();
-
-void M3Code();
-void M4Code();
 
 
-//the struct types defined in the code
-std::vector <std::vector<StructType> > structs_stack;
-//stack of symbol tables
-std::vector<SymTable> tables_stack;
-//number of conditional scopes (if/else/while) we are in, used to validate break statements
-unsigned int num_of_while_scopes = 0;
-//var for knowing what type the current function returns
-ExpType cur_ret_type = VOIDEXP;
 
-regHandler reg_handler;
 
-std::string div_by_zero_label;
-
-std::vector<std::vector<int> > break_lists;
-std::vector<std::string> while_start_labels;
 
 
 #endif //HW5_PARSER_CODE_H

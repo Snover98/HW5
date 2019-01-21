@@ -13,8 +13,8 @@
 #include "register_handler.h"
 #include "Node.h"
 
-int num_strings = 0;
-std::map<std::string, std::string> string_labels;
+static int num_strings = 0;
+static std::map<std::string, std::string> string_labels;
 
 int emitComment(std::string comment);
 int emitComment(std::stringstream& comment);

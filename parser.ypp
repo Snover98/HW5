@@ -11,17 +11,54 @@
 #include "bp.hpp"
 #include "register_handler.h"
 #include "utils.h"
+#include "binary_operators.h"
 #include "comparison_operators.h"
 #include "func_generation.h"
-#include "parser_code.h"
 
 extern int yylineno;
 
 int yylex();
 void yyerror(const char*);
 
+//functions for enum type conversions
+ExpType varToExp(VarType t);
+VarType expToVar(ExpType e);
+
+//functions for creating new scopes
+void addEmptyScope();
+void addFuncScope(const std::string &ID, const std::vector<FormalStruct> &formals, ExpType ret_type);
+//function for removing scope
+void popScope();
+//function for type -> string conversion
+std::string typeToString(VarType type);
+//function for function -> string conversion
+std::string funcToString(FunctionType &func_type);
+//get function argument types vector as string
+std::vector<std::string> funcArgTypes(FunctionType &func_type);
+//func that adds print and printi to the symbol table
+void addPrints();
+
+void M3Code();
+void M4Code();
 //func that checks if an ID is already defined
 void checkID(std::string& ID);
+
+//the struct types defined in the code
+std::vector <std::vector<StructType> > structs_stack;
+//stack of symbol tables
+std::vector<SymTable> tables_stack;
+//number of conditional scopes (if/else/while) we are in, used to validate break statements
+unsigned int num_of_while_scopes = 0;
+//var for knowing what type the current function returns
+ExpType cur_ret_type = VOIDEXP;
+
+regHandler reg_handler;
+
+std::string div_by_zero_label;
+
+std::vector<std::vector<int> > break_lists;
+std::vector<std::string> while_start_labels;
+
 %}
 
 %union{
@@ -75,14 +112,14 @@ void checkID(std::string& ID);
 %left <node> LPAREN
 
 %type <expression> RetType Type Exp BoolExp Call
-%type <statement> Statement SimpleStatement Statements ClosedStatement OpenStatement Call
+%type <statement> Statement SimpleStatement Statements ClosedStatement OpenStatement
 %type <formals_list> FormalsList Formals
 %type <formal_struct> FormalDecl
 %type <struct_memory_list> StructMemList
 %type <struct_memory> StructMem
 %type <expression_list> ExpList
 %type <structure> StructType
-%type <m> M, WM
+%type <m> M WM
 %type <n> N
 
 
@@ -259,17 +296,23 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                     tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
                                     delete $1;
                                     delete $2;
+
+                                    $$ = new Statement();
                                  }
                     | StructType ID SC {
                                         checkID($2->ID);
                                         tables_stack.back().addEntry($2->ID, $1->struct_type);
                                         delete $1;
                                         delete $2;
+
+                                        $$ = new Statement();
                                        }
                     | STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC {
                                                                                     structs_stack.back().push_back(StructType($2->ID, $5->fields));
                                                                                     delete $2;
                                                                                     delete $5;
+
+                                                                                    $$ = new Statement();
                                                                                   }
                     | Type ID ASSIGN Exp SC {
                                                 checkID($2->ID);
@@ -285,8 +328,10 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     emitSaveBoolRes($4, $4->used_register);
                                                 }
 
-                                                emitSaveVar($4->used_register, $2->ID, tables_stack);
+                                                emitSaveVar($4->used_register, $2->ID, tables_stack.back());
                                                 reg_handler.freeRegister($4->used_register);
+
+                                                $$ = new Statement();
                                             }
                     | StructType ID ASSIGN Exp SC {
                                                     checkID($2->ID);
@@ -296,8 +341,10 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     }
                                                     tables_stack.back().addEntry($2->ID, $1->struct_type);
 
-                                                    emitStructsEq($2->ID, $4->used_register, tables_stack, $1->struct_type, reg_handler);
+                                                    emitStructsEq($2->ID, $4->used_register, tables_stack.back(), getStructTypeEntry(structs_stack, $1->struct_type), reg_handler);
                                                     reg_handler.freeRegister($4->used_register);
+
+                                                    $$ = new Statement();
 
                                                     delete $1;
                                                     delete $2;
@@ -314,7 +361,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     output::errorMismatch(yylineno);
                                                     exit(0);
                                                 }
-                                                emitStructsEq($1->ID, $3->used_register, tables_stack, getStructTypeEntry(structs_stack, e.struct_type), reg_handler);
+                                                emitStructsEq($1->ID, $3->used_register, tables_stack.back(), getStructTypeEntry(structs_stack, e.struct_type), reg_handler);
                                             } else {
                                                 if(!isLegalExpType($3, varToExp(e.type))){
                                                     output::errorMismatch(yylineno);
@@ -326,10 +373,12 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     emitSaveBoolRes($3, $3->used_register);
                                                 }
 
-                                                emitSaveVar($3->used_register, $1->ID, tables_stack);
+                                                emitSaveVar($3->used_register, $1->ID, tables_stack.back());
                                             }
 
                                             reg_handler.freeRegister($3->used_register);
+
+                                            $$ = new Statement();
 
                                             delete $1;
                                             delete $3;
@@ -364,8 +413,10 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                         emitSaveBoolRes($5, $5->used_register);
                                                     }
 
-                                                    emitSaveStructField($5->used_register, $1->ID, $3->ID, tables_stack, e.struct_type);
+                                                    emitSaveStructField($5->used_register, $1->ID, $3->ID, tables_stack.back(), getStructTypeEntry(structs_stack, e.struct_type));
                                                     reg_handler.freeRegister($5->used_register);
+
+                                                    $$ = new Statement();
 
                                                     delete $1;
                                                     delete $3;
@@ -375,6 +426,8 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                         if($1->used_register != -1){
                             reg_handler.freeRegister($1->used_register);
                         }
+
+                        $$ = new Statement();
                     }
                     | RETURN SC {
                                     if(cur_ret_type != VOIDEXP){
@@ -383,6 +436,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                     }
 
                                     emitReturn();
+                                    $$ = new Statement();
                                 }
                     | RETURN Exp SC {
                                         if(!isLegalExpType($2, cur_ret_type)){
@@ -397,6 +451,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
 
                                         emitReturn($2->used_register);
                                         reg_handler.freeRegister($2->used_register);
+                                        $$ = new Statement();
 
                                         delete $2;
                                     }
@@ -405,6 +460,8 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                     output::errorUnexpectedBreak(yylineno);
                                     exit(0);
                                 }
+                                $$ = new Statement();
+
 								$$->breaklist=CodeBuffer::makelist(emit("j "));
 
 								if(!break_lists.back().empty()){
@@ -418,26 +475,27 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                         output::errorUnexpectedContinue(yylineno);
                                         exit(0);
                                     }
-									$$->nextlist=CodeBuffer::makelist(CodeBuffer::instance().genlabel());
-									CodeBuffer::instance().emit("j " + while_start_labels.back());
+                                    $$ = new Statement();
+
+									emit("j " + while_start_labels.back());
                                   }
 ;
 
-Call:               ID {emitSetupFuncCall($1->ID, tables_stack, reg_handler)} LPAREN ExpList RPAREN {
+Call:               ID LPAREN {emitSetupFuncCall($1->ID, tables_stack.back(), reg_handler);} ExpList RPAREN {
                                                     SymEntry func_e = getSymbolEntry($1->ID, tables_stack);
                                                     if(!isSymInTable($1->ID, tables_stack) || func_e.type != FUNCTYPE){
                                                         output::errorUndefFunc(yylineno, $1->ID);
                                                         exit(0);
                                                     }
-                                                    if($3->expressions.size() != func_e.func_type.first.size()){
+                                                    if($4->expressions.size() != func_e.func_type.first.size()){
                                                         std::vector<std::string> arg_t = funcArgTypes(func_e.func_type);
                                                         output::errorPrototypeMismatch(yylineno, $1->ID, arg_t);
                                                         exit(0);
                                                     }
 
-                                                    std::vector<Structure>::iterator it_exp =  $3->expressions.begin();
+                                                    std::vector<Structure>::iterator it_exp =  $4->expressions.begin();
                                                     std::vector<FuncParam>::iterator it_arg =  func_e.func_type.first.begin();
-                                                    for(; it_exp != $3->expressions.end() && it_arg != func_e.func_type.first.end(); ++it_exp){
+                                                    for(; it_exp != $4->expressions.end() && it_arg != func_e.func_type.first.end(); ++it_exp){
                                                         bool is_legal = true;
                                                         if((*it_arg).type != STRUCTTYPE || (*it_exp).exp_type != STRUCTEXP){
                                                             is_legal = isLegalExpType((*it_exp).exp_type, varToExp((*it_arg).type));
@@ -454,7 +512,7 @@ Call:               ID {emitSetupFuncCall($1->ID, tables_stack, reg_handler)} LP
                                                     }
 
                                                     //call func
-                                                    emitFuncCall($1->ID, tables_stack, structs_stack, reg_handler);
+                                                    emitFuncCall($1->ID, tables_stack.back(), structs_stack, reg_handler);
 
                                                     int reg=reg_handler.getAvailableRegister();
                                                     $$ = new Expression((varToExp(func_e.func_type.second)),reg);
@@ -463,7 +521,7 @@ Call:               ID {emitSetupFuncCall($1->ID, tables_stack, reg_handler)} LP
                                                     emit("move " + regName(reg) +", $v0");
 
                                                     delete $1;
-                                                    delete $3;
+                                                    delete $4;
                                              }
                     | ID LPAREN RPAREN {
                                             SymEntry func_e = getSymbolEntry($1->ID, tables_stack);
@@ -478,10 +536,10 @@ Call:               ID {emitSetupFuncCall($1->ID, tables_stack, reg_handler)} LP
                                             }
 
                                             //setup func call
-                                            emitSetupFuncCall($1->ID, tables_stack, reg_handler);
+                                            emitSetupFuncCall($1->ID, tables_stack.back(), reg_handler);
 
                                             //call func
-                                            emitFuncCall($1->ID, tables_stack, structs_stack, reg_handler);
+                                            emitFuncCall($1->ID, tables_stack.back(), structs_stack, reg_handler);
 
                                             int reg=reg_handler.getAvailableRegister();
                                             $$ = new Expression((varToExp(func_e.func_type.second)),reg);
@@ -579,7 +637,7 @@ Exp:                LPAREN Exp RPAREN {
 
 							int reg=reg_handler.getAvailableRegister();
                             //load value into register
-                            emitLoadVar(reg, $1->ID, tables_stack);
+                            emitLoadVar(reg, $1->ID, tables_stack.back());
 
 							//check if this is a boolean expression
 							if ($$->exp_type==BOOLEXP){
@@ -614,7 +672,7 @@ Exp:                LPAREN Exp RPAREN {
                                         }
 										int reg = reg_handler.getAvailableRegister();
 										//load value into register
-                                        emitLoadStructField(reg, $1->ID, ,$2->ID, tables_stack, t);
+                                        emitLoadStructField(reg, $1->ID, $3->ID, tables_stack.back(), t);
 
                                         //check if this is a boolean expression
                                         if ($$->exp_type==BOOLEXP){
@@ -641,13 +699,12 @@ Exp:                LPAREN Exp RPAREN {
                                     exit(0);
                                 }
 
-								$$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
+								$$ = new Expression(BYTEEXP,reg_handler.getAvailableRegister());
 								emit("li "+regName($$->used_register)+", "+$1->value);
 
                                 delete $1;
                             }
-                    | STRING{                          
-
+                    | STRING{
 								$$ = new Expression(STRINGEXP,reg_handler.getAvailableRegister());
 								std::string label = strData($1->ID);
 								emit("la " + regName($$->used_register) + ", " + label);
@@ -714,7 +771,7 @@ BoolExp:            Exp {
                                 output::errorMismatch(yylineno);
                                 exit(0);
                             }
-							$$=new Expression(BOOLEXP,-1);
+							$$=$1;
                         }
 ;
 
@@ -790,3 +847,192 @@ void checkID(std::string& ID){
     }
 }
 
+void addPrints(){
+    std::vector<FuncParam> print_func_params = std::vector<FuncParam>();
+    std::vector<FuncParam> printi_func_params = std::vector<FuncParam>();
+
+    print_func_params.push_back(FuncParam(STRINGTYPE));
+    printi_func_params.push_back(FuncParam(INTTYPE));
+
+    tables_stack.back().addEntry("print", print_func_params, NOTYPE);
+    //emit code for print
+    emitFuncStart("print");
+    emit("lw $a0,0($sp)");
+    emit("li $v0,4");
+    emit("syscall");
+    emit("jr $ra");
+    emitFuncEnd("print");
+
+    tables_stack.back().addEntry("printi", printi_func_params, NOTYPE);
+    //emit code for printi
+    emitFuncStart("printi");
+    emit("lw $a0,0($sp)");
+    emit("li $v0,1");
+    emit("syscall");
+    emit("jr $ra");
+    emitFuncEnd("printi");
+}
+
+void popScope(){
+    std::vector<SymEntry> scope_entries = tables_stack.back().scope_entries;
+
+    output::endScope();
+
+    for(std::vector<SymEntry>::iterator it = scope_entries.begin(); it != scope_entries.end(); ++it){
+        std::string type;
+
+        if((*it).type == FUNCTYPE){
+            type = funcToString((*it).func_type);
+        } else{
+            type = typeToString((*it).type) + (((*it).type == STRUCTTYPE) ? (" " + (*it).struct_type) : "");
+        }
+
+        output::printID((*it).ID, (*it).offset, type);
+    }
+
+    std::vector<StructType> scope_structs = structs_stack.back();
+
+    for(std::vector<StructType>::iterator it = scope_structs.begin(); it != scope_structs.end(); ++it){
+        vector<std::string> memTypes = vector<std::string>();
+        vector<std::string> memNames = vector<std::string>();
+
+        for(StructFieldsType::const_iterator field_it = (*it).fields.begin(); field_it != (*it).fields.end(); ++field_it){
+            memTypes.push_back(typeToString((*field_it).second));
+            memNames.push_back((*field_it).first);
+        }
+
+        output::printStructType((*it).type_name, memTypes, memNames);
+    }
+
+    tables_stack.pop_back();
+    structs_stack.pop_back();
+}
+
+std::string funcToString(FunctionType &func_type){
+    std::string t = typeToString(func_type.second);
+    std::vector<std::string> func_args = funcArgTypes(func_type);
+    return output::makeFunctionType(t, func_args);
+}
+
+std::vector<std::string> funcArgTypes(FunctionType &func_type){
+    std::vector<std::string> argTypes = vector<std::string>();
+
+    for(std::vector<FuncParam>::iterator it = func_type.first.begin(); it != func_type.first.end(); ++it){
+        argTypes.push_back(typeToString((*it).type) + (((*it).type == STRUCTTYPE) ? (" " + (*it).struct_type) : ""));
+    }
+
+    return argTypes;
+}
+
+std::string typeToString(VarType type){
+    switch(type){
+        case INTTYPE:
+            return "INT";
+        case BYTETYPE:
+            return "BYTE";
+        case BOOLTYPE:
+            return "BOOL";
+        case STRUCTTYPE:
+            return "struct";
+        case STRINGTYPE:
+            return "STRING";
+        default:
+            return "VOID";
+    }
+}
+
+void addFuncScope(const std::string &ID, const std::vector<FormalStruct> &formals, ExpType ret_type){
+    cur_ret_type = ret_type;
+
+    std::vector<FuncParam> func_params = std::vector<FuncParam>();
+
+    for(std::vector<FormalStruct>::const_iterator it = formals.begin(); it!=formals.end(); ++it){
+        if((*it).type == STRUCTEXP){
+            func_params.push_back(FuncParam((*it).struct_type));
+        } else {
+            func_params.push_back(FuncParam(expToVar((*it).type)));
+        }
+    }
+
+    tables_stack.back().addEntry(ID, func_params, expToVar(ret_type));
+
+    addEmptyScope();
+
+    int offset = 0;
+    for(std::vector<FormalStruct>::const_iterator it = formals.begin(); it!=formals.end(); ++it){
+        SymEntry* e;
+
+        if((*it).type == STRUCTEXP){
+            offset -= tables_stack.back().structTypeOffset((*it).struct_type);
+            e = new SymEntry((*it).ID, (*it).struct_type, offset);
+        } else {
+            e = new SymEntry((*it).ID, expToVar((*it).type), --offset);
+        }
+
+        tables_stack.back().addEntry(*e);
+        delete e;
+    }
+
+    emitFuncStart(ID);
+    //add empty place for local variables
+}
+
+void addEmptyScope(){
+    SymTable t = SymTable(&structs_stack, tables_stack.back().nextOffset());
+    tables_stack.push_back(t);
+    structs_stack.push_back(std::vector<StructType>());
+}
+
+VarType expToVar(ExpType e){
+    switch(e){
+        case INTEXP:
+            return INTTYPE;
+        case BYTEEXP:
+            return BYTETYPE;
+        case BOOLEXP:
+            return BOOLTYPE;
+        case STRUCTEXP:
+            return STRUCTTYPE;
+        case FUNCEXP:
+            return FUNCTYPE;
+        case STRINGEXP:
+            return STRINGTYPE;
+        default:
+            //note that no entry in the symbol table can be string or void!
+            return NOTYPE;
+    }
+}
+
+ExpType varToExp(VarType t){
+    switch(t){
+        case INTTYPE:
+            return INTEXP;
+        case BYTETYPE:
+            return BYTEEXP;
+        case BOOLTYPE:
+            return BOOLEXP;
+        case STRUCTTYPE:
+            return STRUCTEXP;
+        case FUNCTYPE:
+            return FUNCEXP;
+        case STRINGTYPE:
+            return STRINGEXP;
+        default:
+            //note that no entry in the symbol table can be string or void!
+            return VOIDEXP;
+    }
+}
+
+void M3Code(){
+    ++num_of_while_scopes;
+    break_lists.push_back(std::vector<int>());
+}
+
+void M4Code(){
+    --num_of_while_scopes;
+    while_start_labels.pop_back();
+    if(!break_lists.back().empty()){
+        CodeBuffer::instance().bpatch(break_lists.back(), CodeBuffer::instance().genLabel());
+    }
+    break_lists.pop_back();
+}

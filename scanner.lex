@@ -65,7 +65,7 @@ continue							return CONTINUE;
 =									return ASSIGN;
 
 (==)|(!=)|(<)|(>)|(<=)|(>=)			{
-                                        yyval.relop = new Relop(std::string(yytext));
+                                        yylval.relop = new Relop(std::string(yytext));
                                         return RELOP;
                                     }
 

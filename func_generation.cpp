@@ -106,26 +106,26 @@ int emitSaveVar(int reg_num, std::string &ID, SymTable &table) {
 }
 
 int
-emitLoadStructField(int reg_num, std::string &struct_name, std::string &field_name, SymTable &table, StructType &t) {
+emitLoadStructField(int reg_num, std::string &struct_name, std::string &field_name, SymTable &table, StructType t) {
     emitComment("Load the value of the field " + struct_name + "." + field_name + "into " + regName(reg_num));
     return emitLoadStructField(reg_num, table.getSymbolEntry(struct_name).offset, field_name, table, t);
 }
 
 int
-emitSaveStructField(int reg_num, std::string &struct_name, std::string &field_name, SymTable &table, StructType &t) {
+emitSaveStructField(int reg_num, std::string &struct_name, std::string &field_name, SymTable &table, StructType t) {
     emitComment("Save the value of the field " + struct_name + "." + field_name + "from " + regName(reg_num));
     return emitSaveStructField(reg_num, table.getSymbolEntry(struct_name).offset, field_name, table, t);
 }
 
-int emitLoadStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType &t) {
+int emitLoadStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType t) {
     return emitSaveVar(reg_num, offset + t.fieldOffset(field_name));
 }
 
-int emitSaveStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType &t) {
+int emitSaveStructField(int reg_num, int offset, std::string &field_name, SymTable &table, StructType t) {
     return emitLoadVar(reg_num, offset + t.fieldOffset(field_name));
 }
 
-int emitStructsEq(int offset1, int reg2, StructType &t, regHandler &r) {
+int emitStructsEq(int offset1, int reg2, StructType t, regHandler &r) {
     int reg = r.getAvailableRegister();
     int first_command = INT_MAX;
     for (int i = 0; i < t.fields.size(); ++i) {
@@ -140,7 +140,7 @@ int emitStructsEq(int offset1, int reg2, StructType &t, regHandler &r) {
     return first_command;
 }
 
-int emitStructsEq(std::string &struct1, int reg2, SymTable &table, StructType &t, regHandler &r) {
+int emitStructsEq(std::string &struct1, int reg2, SymTable &table, StructType t, regHandler &r) {
     emitComment("executing " + struct1 + " =  EXP");
     return emitStructsEq(table.getSymbolEntry(struct1).offset, reg2, t, r);
 }
