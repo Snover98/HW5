@@ -29,7 +29,7 @@ int updateSPBeforeCall(std::string func_name, SymTable &table);
 int emitSaveRegisters(regHandler &r);
 
 // function for pushing value in the register into the stack
-int emitPushReg(int reg_num, Expression* e = NULL);
+int emitPushReg(int reg_num);
 
 //function for popping registers from stack
 int emitLoadRegisters(regHandler &r);
