@@ -600,8 +600,7 @@ Exp:                LPAREN Exp RPAREN {
                     | STRING{                          
 
 								$$ = new Expression(STRINGEXP,reg_handler.getAvailableRegister());
-								//TODO make sure that the string is in the data area
-								//TODO load string from data (or use the address?)
+								//TODO put the string address in the relevant register
 							}
                     | TRUE  {
 								$$ = new Expression(BOOLEXP,-1);
