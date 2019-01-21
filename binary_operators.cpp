@@ -6,13 +6,13 @@
 
 std::string operatorCommand(std::string &op) {
     if (op == "+") {
-        return "add";
+        return "addu";
     } else if (op == "/") {
-        return "div";
+        return "divu";
     } else if (op == "*") {
-        return "mulo";
+        return "mulou";
     } else if (op == "-") {
-        return "sub";
+        return "subu";
     }
 
     return "nop";
