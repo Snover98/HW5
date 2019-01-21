@@ -44,7 +44,7 @@ int emitSetupFuncCall(std::string func_name, SymTable &table, regHandler &r) {
 
 int updateSPBeforeCall(std::string func_name, SymTable &table) {
     emitComment("update $sp according to the symbol table");
-    return emit("add $sp, $fp, (-" + numToString(table.nextOffset()) + ")");
+    return emit("addu $sp, $fp, (" + numToString(-table.nextOffset()) + ")");
 }
 
 int emitSaveRegisters(regHandler &r) {
@@ -84,7 +84,7 @@ int emitLoadVar(int reg_num, int offset) {
 
 int emitSaveVar(int reg_num, int offset) {
     offset *= 4;
-    int first_command = emit("add " + regName(reg_num) + ", $fp, " + numToString(-offset));
+    int first_command = emit("addu " + regName(reg_num) + ", $fp, " + numToString(-offset));
     emit("sw " + regName(reg_num) + ", " + "(" + regName(reg_num) + ")");
     return first_command;
 }
@@ -94,7 +94,7 @@ int emitLoadVar(int reg_num, std::string &ID, SymTable &table) {
 
     //in case of a struct, load it's loction in the stack
     if(table.getSymbolEntry(ID).type == STRUCTTYPE){
-        return emit("add " + regName(reg_num) + ", $fp, " + numToString(-table.getSymbolEntry(ID).offset));
+        return emit("addu " + regName(reg_num) + ", $fp, " + numToString(-table.getSymbolEntry(ID).offset));
     } else {
         return emitLoadVar(reg_num, table.getSymbolEntry(ID).offset);
     }
