@@ -612,7 +612,7 @@ Exp:                LPAREN Exp RPAREN {
                                 }
 
                                 //if(strtol(val_str.c_str(), NULL, 10) < 0){
-                                    //TODO: make sure the number is positive
+                                    //TODO: make sure the number is positive (ACTUALLY NOT NEEDED ACCORDING TO THE SCANNER)
                                 //}
 								$$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
 								emit("li "+regName($$->used_register)+", "+$1->value);
