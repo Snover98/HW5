@@ -10,7 +10,7 @@
 #include <sstream>
 #include "SymTable.h"
 #include <map>
-#include <register_handler.h>
+#include "register_handler.h"
 
 int num_strings = 0;
 std::map<std::string, std::string> string_labels;
