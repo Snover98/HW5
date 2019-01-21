@@ -80,7 +80,7 @@ int emitDivByZeroCheck(int reg, std::string& handler_label){
 
 std::string emitDivByZeroHandler(){
     std::string handler_label = CodeBuffer::instance().genLabel();
-    std::string error_msg = strData("Error division by zero \n");
+    std::string error_msg = strData("Error division by zero\n");
     //load error message as an argument for the syscall
     emit("la $a0, " + error_msg);
     //prime syscall
