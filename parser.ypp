@@ -129,6 +129,7 @@ FuncDecl:           RetType ID {checkID($2->ID);} LPAREN Formals RPAREN {
 } LBRACE Statements RBRACE {
     popScope();
     cur_ret_type = VOIDEXP;
+    emitFuncEnd($2->ID);
 };
 
 Structs:            /*epsilon*/
