@@ -701,6 +701,7 @@ M4:                 {--num_of_while_scopes;}
 %%
 
 int main(){
+    emit("j main");
     reg_handler = regHandler();
     div_by_zero_label = emitDivByZeroHandler();
 
