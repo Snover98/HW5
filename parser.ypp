@@ -391,7 +391,6 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
 ;
 
 Call:               ID {emitSetupFuncCall($1->ID, tables_stack, reg_handler)} LPAREN ExpList RPAREN {
-                                                    //TODO make sure to emit the actual function call
                                                     SymEntry func_e = getSymbolEntry($1->ID, tables_stack);
                                                     if(!isSymInTable($1->ID, tables_stack) || func_e.type != FUNCTYPE){
                                                         output::errorUndefFunc(yylineno, $1->ID);
