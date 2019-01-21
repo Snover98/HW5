@@ -94,6 +94,7 @@ std::string emitDivByZeroHandler(){
 }
 
 int emitSaveBoolRes(Expression* bool_exp, int reg){
+    emitComment("Saving boolean result into " + regName(reg));
     //if true, put 1 in the register and jump forward
     std::string true_label = CodeBuffer::instance().genLabel();
     int first_command = emit("li " + regName(reg) + ", 1");
