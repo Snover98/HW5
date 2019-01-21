@@ -142,6 +142,7 @@ StructsDecl:        STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC 
 
 RetType:            Type {$$ = $1;}
                     | VOID {
+                                    //TODO DON'T DO THIS, THERE IS NO VALUE TO STORE IN A REGISTER!
 									int reg=reg_handler.getAvailableRegister();
 									$$ = new Expression(VOIDEXP,reg);
 						   }
