@@ -39,6 +39,9 @@ std::vector<std::string> funcArgTypes(FunctionType &func_type);
 //func that adds print and printi to the symbol table
 void addPrints();
 
+void M3Code();
+void M4Code();
+
 
 //the struct types defined in the code
 std::vector <std::vector<StructType> > structs_stack;
@@ -52,6 +55,9 @@ ExpType cur_ret_type = VOIDEXP;
 regHandler reg_handler;
 
 std::string div_by_zero_label;
+
+std::vector<std::vector<int> > break_lists;
+std::vector<std::string> while_start_labels;
 
 
 #endif //HW5_PARSER_CODE_H

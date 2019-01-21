@@ -691,10 +691,14 @@ M1:                 {addEmptyScope();}
 M2:                 {popScope();}
 ;
 //TODO add code making sure break and continue work correctly
-M3:                  {++num_of_while_scopes;}
+M3:                  {
+    M3Code();
+}
 ;
 
-M4:                 {--num_of_while_scopes;}
+M4:                 {
+    M4Code();
+}
 ;
 
 %%

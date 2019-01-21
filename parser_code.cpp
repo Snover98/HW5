@@ -179,3 +179,18 @@ ExpType varToExp(VarType t){
             return VOIDEXP;
     }
 }
+
+void M3Code(std::string bool_exp_label){
+    ++num_of_while_scopes;
+    while_start_labels.push_back(CodeBuffer::instance().genLabel());
+    break_lists.push_back(std::vector<int>());
+}
+
+void M4Code(){
+    --num_of_while_scopes;
+    while_start_labels.pop_back();
+    if(!break_lists.back().empty()){
+        CodeBuffer::instance().bpatch(break_lists.back(), CodeBuffer::instance().genLabel());
+    }
+    break_lists.pop_back();
+}
