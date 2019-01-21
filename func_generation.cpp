@@ -134,10 +134,12 @@ int emitStructsEq(std::string& struct1, std::string& struct2, SymTable& table, S
 int emitFuncCall(std::string func_name, SymTable& table, std::vector<std::vector<StructType> > &structs_stack){
     //move frame pointer to new location
     int first_command = emit("move $fp, $sp");
+    //add place in stack so that the usage of the symbol table's offsets will be correct
+    addPlaceInStack();
     //call func
     emit("jal " + func_name);
     //remove all func arguments from the stack
-    removePlaceInStack(funcArgsTotOffset(table.getSymbolEntry(func_name).func_type.first, table, structs_stack));
+    removePlaceInStack(funcArgsTotOffset(table.getSymbolEntry(func_name).func_type.first, table, structs_stack) + 1);
 
     //pop $ra and $fp
     emit("lw $ra, ($sp)");
