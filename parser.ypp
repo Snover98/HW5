@@ -390,7 +390,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                   }
 ;
 
-Call:               ID LPAREN ExpList RPAREN {
+Call:               ID {emitSetupFuncCall($1->ID, tables_stack, reg_handler)} LPAREN ExpList RPAREN {
                                                     //TODO make sure to emit the actual function call
                                                     SymEntry func_e = getSymbolEntry($1->ID, tables_stack);
                                                     if(!isSymInTable($1->ID, tables_stack) || func_e.type != FUNCTYPE){
@@ -420,14 +420,20 @@ Call:               ID LPAREN ExpList RPAREN {
                                                         }
                                                         ++it_arg;
                                                     }
-													
-													int reg=reg_handler.getAvailableRegister();
+
+                                                    //call func
+                                                    emitFuncCall($1->ID, tables_stack, structs_stack, reg_handler);
+
+                                                    int reg=reg_handler.getAvailableRegister();
                                                     $$ = new Expression((varToExp(func_e.func_type.second)),reg);
+
+                                                    //save return value
+                                                    emit("move " + regName(reg) +", $v0");
+
                                                     delete $1;
                                                     delete $3;
                                              }
                     | ID LPAREN RPAREN {
-                                            //TODO make sure to emit the actual function call
                                             SymEntry func_e = getSymbolEntry($1->ID, tables_stack);
                                             if(!isSymInTable($1->ID, tables_stack) || func_e.type != FUNCTYPE){
                                                 output::errorUndefFunc(yylineno, $1->ID);
@@ -439,8 +445,17 @@ Call:               ID LPAREN ExpList RPAREN {
                                                 exit(0);
                                             }
 
+                                            //setup func call
+                                            emitSetupFuncCall($1->ID, tables_stack, reg_handler);
+
+                                            //call func
+                                            emitFuncCall($1->ID, tables_stack, structs_stack, reg_handler);
+
                                             int reg=reg_handler.getAvailableRegister();
-											$$ = new Expression((varToExp(func_e.func_type.second)),reg);
+                                            $$ = new Expression((varToExp(func_e.func_type.second)),reg);
+
+                                            //save return value
+                                            emit("move " + regName(reg) +", $v0");
                                             delete $1;
                                        }
 ;
