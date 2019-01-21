@@ -14,11 +14,13 @@ int emitFuncStart(std::string func_name) {
 }
 
 int emitFuncEnd(std::string func_name) {
-    int first_command = INT_MAX;
+    int first_command;
     if (func_name == "main") {
         first_command = emitTerminate();
+    } else {
+        first_command = emitReturn();
     }
-    first_command = std::min(first_command, emit(".end " + func_name));
+    emit(".end " + func_name);
     emit("");
     return first_command;
 }
