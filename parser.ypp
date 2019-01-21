@@ -278,7 +278,16 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     output::errorMismatch(yylineno);
                                                     exit(0);
                                                 }
+
                                                 tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
+
+                                                if($4->exp_type == BOOLEXP){
+                                                    $4->used_register = reg_handler.getAvailableRegister();
+                                                    emitSaveBoolRes($4, $4->used_register);
+                                                }
+
+                                                emitSaveVar($4->used_register, $2->ID, tables_stack);
+                                                reg_handler.freeRegister($4->used_register);
                                             }
                     | StructType ID ASSIGN Exp SC {
                                                     //TODO make sure to put the EXP value in the var and free the register
@@ -288,6 +297,10 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                         exit(0);
                                                     }
                                                     tables_stack.back().addEntry($2->ID, $1->struct_type);
+
+                                                    emitStructsEq($2->ID, $4->used_register, tables_stack, $1->struct_type, reg_handler);
+                                                    reg_handler.freeRegister($4->used_register);
+
                                                     delete $1;
                                                     delete $2;
                                                     delete $4;
@@ -304,12 +317,23 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     output::errorMismatch(yylineno);
                                                     exit(0);
                                                 }
+                                                emitStructsEq($1->ID, $3->used_register, tables_stack, getStructTypeEntry(structs_stack, e.struct_type), reg_handler);
                                             } else {
                                                 if(!isLegalExpType($3, varToExp(e.type))){
                                                     output::errorMismatch(yylineno);
                                                     exit(0);
                                                 }
+
+                                                if($3->exp_type == BOOLEXP){
+                                                    $3->used_register = reg_handler.getAvailableRegister();
+                                                    emitSaveBoolRes($3, $3->used_register);
+                                                }
+
+                                                emitSaveVar($3->used_register, $1->ID, tables_stack);
                                             }
+
+                                            reg_handler.freeRegister($3->used_register);
+
                                             delete $1;
                                             delete $3;
                                        }
@@ -338,6 +362,14 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                         output::errorMismatch(yylineno);
                                                         exit(0);
                                                     }
+
+                                                    if($5->exp_type == BOOLEXP){
+                                                        $5->used_register = reg_handler.getAvailableRegister();
+                                                        emitSaveBoolRes($5, $5->used_register);
+                                                    }
+
+                                                    emitSaveStructField($5->used_register, $1->ID, $3->ID, tables_stack, e.struct_type);
+
                                                     delete $1;
                                                     delete $3;
                                                     delete $5;
@@ -451,6 +483,11 @@ Call:               ID {emitSetupFuncCall($1->ID, tables_stack, reg_handler)} LP
 ExpList:            Exp {
                             $$ = new ExpressionList();
                             $$->expressions.push_back(expressionToList($1));
+
+                            if($1->exp_type == BOOLEXP){
+                                $1->used_register = reg_handler.getAvailableRegister();
+                                emitSaveBoolRes($1, $1->used_register);
+                            }
 
                             //push the expression value
                             pushExp($1, reg_handler, structs_stack);
