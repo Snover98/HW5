@@ -20,24 +20,10 @@ extern int yylineno;
 int yylex();
 void yyerror(const char*);
 
-//functions for enum type conversions
-ExpType varToExp(VarType t);
-VarType expToVar(ExpType e);
-
 //func that checks if an ID is already defined
 void checkID(std::string& ID);
 
-//the struct types defined in the code
-std::vector <std::vector<StructType> > structs_stack;
-//stack of symbol tables
-std::vector<SymTable> tables_stack;
-//number of conditional scopes (if/else/while) we are in, used to validate break statements
-unsigned int num_of_while_scopes = 0;
-//var for knowing what type the current function returns
-ExpType cur_ret_type = VOIDEXP;
-
 regHandler reg_handler = regHandler();
-utils utils = utils();
 
 
 %}
