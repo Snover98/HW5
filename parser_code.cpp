@@ -180,7 +180,7 @@ ExpType varToExp(VarType t){
     }
 }
 
-void M3Code(std::string bool_exp_label){
+void M3Code(){
     ++num_of_while_scopes;
     break_lists.push_back(std::vector<int>());
 }
