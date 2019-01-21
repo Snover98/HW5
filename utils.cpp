@@ -92,3 +92,22 @@ std::string emitDivByZeroHandler(){
 
     return handler_label;
 }
+
+int emitSaveBoolRes(Expression* bool_exp, int reg){
+    //if true, put 1 in the register and jump forward
+    std::string true_label = CodeBuffer::instance().genLabel();
+    int first_command = emit("li " + regName(reg) + ", 1");
+    std::vector<int> next_jump = CodeBuffer::makelist(emit("j "));
+    //false put 0 in the register
+    std::string false_label = CodeBuffer::instance().genLabel();
+    emit("li " + regName(reg) + ", 0");
+    std::string next_label = CodeBuffer::instance().genLabel();
+    //backpatch jump to next
+    CodeBuffer::instance().bpatch(next_jump, next_label);
+
+    //back patch true and false lists
+    CodeBuffer::instance().bpatch(bool_exp->truelist, true_label);
+    CodeBuffer::instance().bpatch(bool_exp->falselist, false_label);
+
+    return first_command;
+}

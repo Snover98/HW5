@@ -11,6 +11,7 @@
 #include "SymTable.h"
 #include <map>
 #include "register_handler.h"
+#include "Node.h"
 
 int num_strings = 0;
 std::map<std::string, std::string> string_labels;
@@ -27,6 +28,9 @@ int emitTerminate();
 int emitDivByZeroCheck(int reg, std::string& handler_label);
 //returns the label of the handler
 std::string emitDivByZeroHandler();
+
+//puts the result of a boolean expression in a register
+int emitSaveBoolRes(Expression* bool_exp, int reg);
 
 int funcArgsTotOffset(std::vector<FuncParam> params, SymTable& table, std::vector<std::vector<StructType> >& structs_stack);
 std::string strData(std::string str);
