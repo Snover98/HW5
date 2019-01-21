@@ -48,7 +48,7 @@ void checkID(std::string& ID);
 %nonassoc <node> B
 %nonassoc <node> BYTE
 %nonassoc <node> INT
-%nonassoc <node> STRING
+%nonassoc <identifier> STRING
 %nonassoc <num> NUM
 %nonassoc <identifier> ID
 %nonassoc <node> VOID
@@ -124,9 +124,7 @@ StructsDecl:        STRUCT ID {checkID($2->ID);} LBRACE StructMemList RBRACE SC 
 
 RetType:            Type {$$ = $1;}
                     | VOID {
-                                    //TODO DON'T DO THIS, THERE IS NO VALUE TO STORE IN A REGISTER!
-									int reg=reg_handler.getAvailableRegister();
-									$$ = new Expression(VOIDEXP,reg);
+									$$ = new Expression(VOIDEXP,-1);
 						   }
 ;
 
@@ -222,13 +220,14 @@ OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2
 									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist, 
 											$9->nextlist),$13->nextlist);
 								}
-                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2
+                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2 M
 								{
 									$$=new Statement();
 									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
 									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
 									$$->nextlist=CodeBuffer::merge($5->falselist,$9->breaklist);
-									CodeBuffer::instance().emit("j "+$3->quad);
+									CodeBuffer::instance().bpatch($5->truelist,$12->quad);
+									emit("j "+$3->quad);
 								}
 ;
 
@@ -240,12 +239,13 @@ ClosedStatement:    SimpleStatement
 									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
 									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist,$9->nextlist),$13->nextlist);
 								}
-                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2
+                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2 M
 								{
 									$$=new Statement();
 									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
 									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
 									$$->nextlist=CodeBuffer::merge($5->falselist,$9->breaklist);
+									CodeBuffer::instance().bpatch($5->truelist,$12->quad);
 									CodeBuffer::instance().emit("j "+$3->quad);
 								}
 ;
@@ -272,7 +272,6 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                                                     delete $5;
                                                                                   }
                     | Type ID ASSIGN Exp SC {
-                                                //TODO make sure to put the EXP value in the var and free the register
                                                 checkID($2->ID);
                                                 if(!isLegalExpType($4, $1)){
                                                     output::errorMismatch(yylineno);
@@ -290,7 +289,6 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                 reg_handler.freeRegister($4->used_register);
                                             }
                     | StructType ID ASSIGN Exp SC {
-                                                    //TODO make sure to put the EXP value in the var and free the register
                                                     checkID($2->ID);
                                                     if(!isLegalExpType($4, $1)){
                                                         output::errorMismatch(yylineno);
@@ -306,7 +304,6 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     delete $4;
                                                   }
                     | ID ASSIGN Exp SC {
-                                            //TODO make sure to put the EXP value in the var and free the register
                                             SymEntry e = getSymbolEntry($1->ID, tables_stack);
                                             if(!isSymInTable($1->ID, tables_stack) || !e.isVariable()){
                                                 output::errorUndef(yylineno, $1->ID);
@@ -338,7 +335,6 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                             delete $3;
                                        }
                     | ID PERIOD ID ASSIGN Exp SC {
-                                                    //TODO make sure to put the EXP value in the var and free the register
                                                     SymEntry e = getSymbolEntry($1->ID, tables_stack);
                                                     if(!isSymInTable($1->ID, tables_stack) || !e.isVariable()){
                                                         output::errorUndef(yylineno, $1->ID);
@@ -369,23 +365,39 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     }
 
                                                     emitSaveStructField($5->used_register, $1->ID, $3->ID, tables_stack, e.struct_type);
+                                                    reg_handler.freeRegister($5->used_register);
 
                                                     delete $1;
                                                     delete $3;
                                                     delete $5;
                                                  }
-                    | Call SC
+                    | Call SC {
+                        if($1->used_register != -1){
+                            reg_handler.freeRegister($1->used_register);
+                        }
+                    }
                     | RETURN SC {
                                     if(cur_ret_type != VOIDEXP){
                                         output::errorMismatch(yylineno);
                                         exit(0);
                                     }
+
+                                    emitReturn();
                                 }
                     | RETURN Exp SC {
                                         if(!isLegalExpType($2, cur_ret_type)){
                                             output::errorMismatch(yylineno);
                                             exit(0);
                                         }
+
+                                        if($2->exp_type == BOOLEXP){
+                                            $2->used_register = reg_handler.getAvailableRegister();
+                                            emitSaveBoolRes($2, $2->used_register);
+                                        }
+
+                                        emitReturn($2->used_register);
+                                        reg_handler.freeRegister($2->used_register);
+
                                         delete $2;
                                     }
                     | BREAK SC {
@@ -620,7 +632,7 @@ Exp:                LPAREN Exp RPAREN {
                     | Call {$$ = $1;}
                     | NUM {
                             $$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
-							emit("li $" + regName($$->used_register) + ", " + $1->value);
+							emit("li " + regName($$->used_register) + ", " + $1->value);
                           }
                     | NUM B {
 								string val_str = $1->value;
@@ -629,9 +641,6 @@ Exp:                LPAREN Exp RPAREN {
                                     exit(0);
                                 }
 
-                                //if(strtol(val_str.c_str(), NULL, 10) < 0){
-                                    //TODO: make sure the number is positive (ACTUALLY NOT NEEDED ACCORDING TO THE SCANNER)
-                                //}
 								$$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
 								emit("li "+regName($$->used_register)+", "+$1->value);
 
@@ -640,7 +649,8 @@ Exp:                LPAREN Exp RPAREN {
                     | STRING{                          
 
 								$$ = new Expression(STRINGEXP,reg_handler.getAvailableRegister());
-								//TODO put the string address in the relevant register
+								std::string label = strData($1->ID);
+								emit("la " + regName($$->used_register) + ", " + label);
 							}
                     | TRUE  {
 								$$ = new Expression(BOOLEXP,-1);
@@ -658,7 +668,6 @@ Exp:                LPAREN Exp RPAREN {
                                 $$ = new Expression(BOOLEXP,-1);
 								$$->truelist=$2->falselist;
 								$$->falselist=$2->truelist;
-								//TODO emit code computing the expression (?)
 
                                 delete $2;
                               }
@@ -671,7 +680,6 @@ Exp:                LPAREN Exp RPAREN {
 									CodeBuffer::instance().bpatch($1->truelist,$3->quad);
 									$$->truelist=$4->truelist;
 									$$->falselist=CodeBuffer::merge($1->falselist,$4->falselist);
-									//TODO emit code computing the expression
 
                                   }
                     | Exp OR M Exp {
@@ -683,7 +691,6 @@ Exp:                LPAREN Exp RPAREN {
 									CodeBuffer::instance().bpatch($1->falselist,$3->quad);
 									$$->falselist = $4->falselist;
 									$$->truelist = CodeBuffer::merge($1->truelist, $4->truelist);
-									//TODO emit code computing the expression
 
                                  }
                     | Exp RELOP Exp {
@@ -738,7 +745,7 @@ M1:                 {addEmptyScope();}
 
 M2:                 {popScope();}
 ;
-//TODO add code making sure break and continue work correctly
+
 M3:                  {
     M3Code();
 }

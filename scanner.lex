@@ -84,7 +84,10 @@ continue							return CONTINUE;
                                         return NUM;
                                     }
 
-\"([^\n\r\"\\]|\\[rnt"\\])+\"		return STRING;
+\"([^\n\r\"\\]|\\[rnt"\\])+\"		{
+                                        yylval.identifier = new Identifier(std::string(yytext));
+                                        return STRING;
+                                    }
 
 \/\/[^\r\n]*[ \r|\n|\r\n]?			;
 
