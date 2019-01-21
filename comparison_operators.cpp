@@ -23,13 +23,7 @@ std::string relopCommand(std::string &op) {
 }
 
 
-std::string relopString(Expression *exp1, Expression *exp2, std::string &op, regHandler &r) {
+std::string relopString(Expression *exp1, Expression *exp2, std::string &op) {
     //create the string of the command that will compute the expression
-    std::stringstream command;
-    //the new expression will be in the same register as exp1's current one
-    command << relopCommand(op) << " " << regName(exp1->used_register) << ", ";
-    command << regName(exp1->used_register) << ", " << regName(exp2->used_register) << " ";
-    //free the register used by exp2
-    r.freeRegister(exp2->used_register);
-    return command.str();
+    return relopCommand(op) + " " + regName(exp1->used_register) + ", " + regName(exp2->used_register);
 }

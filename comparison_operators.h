@@ -11,6 +11,6 @@
 
 
 std::string relopCommand(std::string& op);
-std::string relopString(Expression* exp1, Expression* exp2, std::string& op, regHandler& r);
+std::string relopString(Expression* exp1, Expression* exp2, std::string& op);
 
 #endif //HW5_COMPARISON_OPERATORS_H
