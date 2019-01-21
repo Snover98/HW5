@@ -111,3 +111,13 @@ int emitSaveBoolRes(Expression* bool_exp, int reg){
 
     return first_command;
 }
+
+int getExpReg(Expression* exp, regHandler& r){
+    //if it's an expression that isn't in a register take a register for it
+    if(exp->used_register == -1){
+        exp->used_register = r.getAvailableRegister();
+    }
+
+    return exp->used_register
+
+}

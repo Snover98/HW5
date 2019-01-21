@@ -35,4 +35,6 @@ int emitSaveBoolRes(Expression* bool_exp, int reg);
 int funcArgsTotOffset(std::vector<FuncParam> params, SymTable& table, std::vector<std::vector<StructType> >& structs_stack);
 std::string strData(std::string str);
 
+int getExpReg(Expression* exp, regHandler& r);
+
 #endif //HW5_UTILS_H
