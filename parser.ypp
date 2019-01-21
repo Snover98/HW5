@@ -446,15 +446,21 @@ Call:               ID LPAREN ExpList RPAREN {
 ;
 
 ExpList:            Exp {
-                            //TODO save computed expression in correct place in stack, make sure to take care of booleans
                             $$ = new ExpressionList();
                             $$->expressions.push_back(expressionToList($1));
+
+                            //push the expression value
+                            pushExp($1, reg_handler, structs_stack);
+
                             delete $1;
                         }
                     | Exp COMMA ExpList {
-                                            //TODO save computed expression in correct place in stack, make sure to take care of booleans
                                             $$ = $3;
                                             $$->expressions.insert($$->expressions.begin(), expressionToList($1));
+
+                                            //push the expression value
+                                            pushExp($1, reg_handler, structs_stack);
+
                                             delete $1;
                                         }
 ;
