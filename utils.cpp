@@ -119,6 +119,5 @@ int getExpReg(Expression* exp, regHandler& r){
         exp->used_register = r.getAvailableRegister();
     }
 
-    return exp->used_register
-
+    return exp->used_register;
 }
