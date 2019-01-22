@@ -111,7 +111,7 @@ std::vector<std::string> while_start_labels;
 %left <node> RPAREN
 %left <node> LPAREN
 
-%type <expression> RetType Type Exp BoolExp Call
+%type <expression> RetType Type Exp BoolExp Call ELM
 %type <statement> Statement SimpleStatement Statements ClosedStatement OpenStatement
 %type <formals_list> FormalsList Formals
 %type <formal_struct> FormalDecl
@@ -234,8 +234,12 @@ StructMem:          Type ID SC {
                                     delete $2;
                                };
 
-Statements:         Statement
-                    | Statements Statement
+Statements:         Statement {$$ = $1;}
+                    | Statements Statement {
+                        $$ = $2;
+                        $$->nextlist = CodeBuffer::merge($1->nextlist ,$2->nextlist);
+                        $$->breaklist = CodeBuffer::merge($1->breaklist ,$2->breaklist);
+                    }
 ;
 
 Statement:          OpenStatement
@@ -248,6 +252,7 @@ OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2
 									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
 									$$->nextlist=CodeBuffer::merge($4->falselist,$7->nextlist);
 									CodeBuffer::instance().bpatch($$->nextlist, CodeBuffer::instance().genLabel());
+									$$->breaklist = $7->breaklist;
 								}
                     | IF M1 LPAREN BoolExp RPAREN M ClosedStatement M2 N ELSE M1 M OpenStatement M2
 								{
@@ -257,15 +262,18 @@ OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2
 									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist, 
 											$9->nextlist),$13->nextlist);
 									CodeBuffer::instance().bpatch($$->nextlist, CodeBuffer::instance().genLabel());
+									$$->breaklist = CodeBuffer::merge($7->breaklist,$13->breaklist);
 								}
-                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2 M
+                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2
 								{
 									$$=new Statement();
-									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
+									//CodeBuffer::instance().bpatch($9->nextlist,$3->quad);
 									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
-									$$->nextlist=CodeBuffer::merge($5->falselist,$9->breaklist);
-									CodeBuffer::instance().bpatch($5->truelist,$12->quad);
 									emit("j "+$3->quad);
+									std::string label = CodeBuffer::instance().genLabel();
+									CodeBuffer::instance().bpatch($5->falselist, label);
+									CodeBuffer::instance().bpatch(break_lists.back(), label);
+									break_lists.pop_back();
 								}
 ;
 
@@ -277,15 +285,18 @@ ClosedStatement:    SimpleStatement
 									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
 									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist,$9->nextlist),$13->nextlist);
 									CodeBuffer::instance().bpatch($$->nextlist, CodeBuffer::instance().genLabel());
+									$$->breaklist = CodeBuffer::merge($7->breaklist,$13->nextlist);
 								}
-                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2 M
+                    | WHILE M1 WM LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2
 								{
-									$$=new Statement();
-									CodeBuffer::instance().bpatch($9->nextlist,$3->quad);							
-									CodeBuffer::instance().bpatch($5->truelist,$8->quad);
-									$$->nextlist=CodeBuffer::merge($5->falselist,$9->breaklist);
-									CodeBuffer::instance().bpatch($5->truelist,$12->quad);
-									CodeBuffer::instance().emit("j "+$3->quad);
+                                    $$=new Statement();
+                                    //CodeBuffer::instance().bpatch($9->nextlist,$3->quad);
+                                    CodeBuffer::instance().bpatch($5->truelist,$8->quad);
+                                    emit("j "+$3->quad);
+                                    std::string label = CodeBuffer::instance().genLabel();
+                                    CodeBuffer::instance().bpatch($5->falselist, label);
+                                    CodeBuffer::instance().bpatch(break_lists.back(), label);
+                                    break_lists.pop_back();
 								}
 ;
 
@@ -294,18 +305,34 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
 									$$ = $3;
 								}
                     | Type ID SC {
+                                    std::string ID = std::string($2->ID);
+
                                     checkID($2->ID);
                                     tables_stack.back().addEntry($2->ID, expToVar($1->exp_type));
                                     delete $1;
                                     delete $2;
 
+                                    int offset = tables_stack.back().lastOffset();
+                                    saveDefaultVal(offset, reg_handler);
+
+                                    updateSPBeforeCall(tables_stack.back());
+
                                     $$ = new Statement();
                                  }
                     | StructType ID SC {
+                                        std::string type = std::string($1->struct_type);
+
                                         checkID($2->ID);
                                         tables_stack.back().addEntry($2->ID, $1->struct_type);
                                         delete $1;
                                         delete $2;
+
+                                        int offset = tables_stack.back().lastOffset();
+                                        for(int i=0; i<getStructTypeEntry(structs_stack, type).fields.size(); ++i){
+                                            saveDefaultVal(offset + i, reg_handler);
+                                        }
+
+                                        updateSPBeforeCall(tables_stack.back());
 
                                         $$ = new Statement();
                                        }
@@ -330,8 +357,10 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     emitSaveBoolRes($4, $4->used_register);
                                                 }
 
-                                                emitSaveVar($4->used_register, $2->ID, tables_stack.back());
+                                                emitSaveVar($4->used_register, $2->ID, tables_stack);
                                                 reg_handler.freeRegister($4->used_register);
+
+                                                updateSPBeforeCall(tables_stack.back());
 
                                                 $$ = new Statement();
                                             }
@@ -343,10 +372,12 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     }
                                                     tables_stack.back().addEntry($2->ID, $1->struct_type);
 
-                                                    emitStructsEq($2->ID, $4->used_register, tables_stack.back(), getStructTypeEntry(structs_stack, $1->struct_type), reg_handler);
+                                                    emitStructsEq($2->ID, $4->used_register, tables_stack, getStructTypeEntry(structs_stack, $1->struct_type), reg_handler);
                                                     reg_handler.freeRegister($4->used_register);
 
                                                     $$ = new Statement();
+
+                                                    updateSPBeforeCall(tables_stack.back());
 
                                                     delete $1;
                                                     delete $2;
@@ -363,7 +394,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     output::errorMismatch(yylineno);
                                                     exit(0);
                                                 }
-                                                emitStructsEq($1->ID, $3->used_register, tables_stack.back(), getStructTypeEntry(structs_stack, e.struct_type), reg_handler);
+                                                emitStructsEq($1->ID, $3->used_register, tables_stack, getStructTypeEntry(structs_stack, e.struct_type), reg_handler);
                                             } else {
                                                 if(!isLegalExpType($3, varToExp(e.type))){
                                                     output::errorMismatch(yylineno);
@@ -375,7 +406,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     emitSaveBoolRes($3, $3->used_register);
                                                 }
 
-                                                emitSaveVar($3->used_register, $1->ID, tables_stack.back());
+                                                emitSaveVar($3->used_register, $1->ID, tables_stack);
                                             }
 
                                             reg_handler.freeRegister($3->used_register);
@@ -415,7 +446,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                         emitSaveBoolRes($5, $5->used_register);
                                                     }
 
-                                                    emitSaveStructField($5->used_register, $1->ID, $3->ID, tables_stack.back(), getStructTypeEntry(structs_stack, e.struct_type));
+                                                    emitSaveStructField($5->used_register, $1->ID, $3->ID, tables_stack, getStructTypeEntry(structs_stack, e.struct_type));
                                                     reg_handler.freeRegister($5->used_register);
 
                                                     $$ = new Statement();
@@ -514,7 +545,7 @@ Call:               ID LPAREN {emitSetupFuncCall($1->ID, tables_stack.back(), re
                                                     }
 
                                                     //call func
-                                                    emitFuncCall($1->ID, tables_stack.back(), structs_stack, reg_handler);
+                                                    emitFuncCall($1->ID, tables_stack, structs_stack, reg_handler);
 
                                                     int reg=reg_handler.getAvailableRegister();
                                                     $$ = new Expression((varToExp(func_e.func_type.second)),reg);
@@ -541,7 +572,7 @@ Call:               ID LPAREN {emitSetupFuncCall($1->ID, tables_stack.back(), re
                                             emitSetupFuncCall($1->ID, tables_stack.back(), reg_handler);
 
                                             //call func
-                                            emitFuncCall($1->ID, tables_stack.back(), structs_stack, reg_handler);
+                                            emitFuncCall($1->ID, tables_stack, structs_stack, reg_handler);
 
                                             int reg=reg_handler.getAvailableRegister();
                                             $$ = new Expression((varToExp(func_e.func_type.second)),reg);
@@ -569,8 +600,8 @@ ExpList:            Exp {
 
                             delete $1;
                         }
-                    | Exp COMMA ExpList {
-                                            $$ = $3;
+                    | ELM ExpList {
+                                            $$ = $2;
                                             $$->expressions.insert($$->expressions.begin(), expressionToList($1));
 
                                             //push the expression value
@@ -640,7 +671,7 @@ Exp:                LPAREN Exp RPAREN {
 
 							int reg=reg_handler.getAvailableRegister();
                             //load value into register
-                            emitLoadVar(reg, $1->ID, tables_stack.back());
+                            emitLoadVar(reg, $1->ID, tables_stack);
 
 							//check if this is a boolean expression
 							if ($$->exp_type==BOOLEXP){
@@ -675,7 +706,7 @@ Exp:                LPAREN Exp RPAREN {
                                         }
 										int reg = reg_handler.getAvailableRegister();
 										//load value into register
-                                        emitLoadStructField(reg, $1->ID, $3->ID, tables_stack.back(), t);
+                                        emitLoadStructField(reg, $1->ID, $3->ID, tables_stack, t);
 
                                         //check if this is a boolean expression
                                         if ($$->exp_type==BOOLEXP){
@@ -816,6 +847,15 @@ M4:                 {
 }
 ;
 
+ELM:        Exp COMMA {
+    if($1->exp_type == BOOLEXP){
+        $1->used_register = reg_handler.getAvailableRegister();
+        emitSaveBoolRes($1, $1->used_register);
+    }
+
+    $$ = $1;
+}
+
 %%
 
 int main(){
@@ -831,9 +871,9 @@ int main(){
     addPrints();
     yyparse();
 
-    emit("");
-
     CodeBuffer::instance().printDataBuffer();
+    std::cout << std::endl;
+    std::cout << std::endl;
     CodeBuffer::instance().printCodeBuffer();
 
     return 0;
@@ -1035,8 +1075,4 @@ void M3Code(){
 void M4Code(){
     --num_of_while_scopes;
     while_start_labels.pop_back();
-    if(!break_lists.back().empty()){
-        CodeBuffer::instance().bpatch(break_lists.back(), CodeBuffer::instance().genLabel());
-    }
-    break_lists.pop_back();
 }

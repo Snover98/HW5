@@ -40,8 +40,7 @@ int removePlaceInStack(int offset) {
     return emit("addu $sp, $sp, " + numToString(offset));
 }
 
-int funcArgsTotOffset(std::vector<FuncParam> params, SymTable &table,
-                      std::vector<std::vector<StructType> > &structs_stack) {
+int funcArgsTotOffset(std::vector<FuncParam> params, std::vector<std::vector<StructType> > &structs_stack) {
     int offset = 0;
     for(std::vector<FuncParam>::iterator it = params.begin(); it != params.end(); ++it){
         if((*it).type != STRUCTTYPE){
@@ -80,7 +79,7 @@ int emitDivByZeroCheck(int reg, std::string& handler_label){
 
 std::string emitDivByZeroHandler(){
     std::string handler_label = CodeBuffer::instance().genLabel();
-    std::string error_msg = strData("\"Error division by zero\"\n");
+    std::string error_msg = strData("\"Error division by zero\n\"");
     //load error message as an argument for the syscall
     emit("la $a0, " + error_msg);
     //prime syscall
@@ -123,3 +122,4 @@ int getExpReg(Expression* exp, regHandler& r){
 
     return exp->used_register;
 }
+

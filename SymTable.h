@@ -88,6 +88,8 @@ public:
     int structTypeOffset(const std::string &ID);
 
     int nextOffset();
+
+    int lastOffset();
 };
 
 SymEntry getSymbolEntry(const std::string &ID, std::vector<SymTable> &tables_stack);

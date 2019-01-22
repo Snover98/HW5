@@ -77,6 +77,10 @@ int SymTable::nextOffset(){
     return CALCOFFSET();
 }
 
+int SymTable::lastOffset(){
+    return scope_entries.back().offset;
+}
+
 SymEntry getSymbolEntry(const std::string &ID, std::vector<SymTable>& tables_stack){
     //find the entry with the same ID in each scope
     for (std::vector<SymTable>::iterator it = tables_stack.begin(); it != tables_stack.end(); ++it) {

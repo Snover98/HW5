@@ -25,5 +25,5 @@ std::string relopCommand(std::string &op) {
 
 std::string relopString(Expression *exp1, Expression *exp2, std::string &op) {
     //create the string of the command that will compute the expression
-    return relopCommand(op) + " " + regName(exp1->used_register) + ", " + regName(exp2->used_register);
+    return relopCommand(op) + " " + regName(exp1->used_register) + ", " + regName(exp2->used_register) + ", ";
 }
