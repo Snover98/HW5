@@ -69,9 +69,14 @@ continue							return CONTINUE;
                                         return RELOP;
                                     }
 
-\+|\-|\*|\/							{
+\+|\-                              {
                                         yylval.binop = new Binop(std::string(yytext));
-                                        return BINOP;
+                                        return ADD;
+                                    }
+
+\*|\/							    {
+                                        yylval.binop = new Binop(std::string(yytext));
+                                        return MUL;
                                     }
 
 [a-zA-Z][a-zA-Z0-9]*				{

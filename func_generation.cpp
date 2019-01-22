@@ -139,7 +139,7 @@ int emitStructsEq(int offset1, int reg2, StructType t, regHandler &r) {
         first_command = std::min(first_command,
                                  emit("addu " + regName(reg) + ", " + regName(reg2) + ", " + numToString(-i * 4)));
         emit("lw " + regName(reg) + ", (" + regName(reg) + ")");
-        emitLoadVar(reg, i + offset1);
+        emitSaveVar(reg, i + offset1);
     }
 
     r.freeRegister(reg);

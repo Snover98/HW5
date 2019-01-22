@@ -105,7 +105,8 @@ std::vector<std::string> while_start_labels;
 %left <node> OR
 %left <node> AND
 %nonassoc <relop> RELOP
-%left <binop> BINOP
+%left <binop> ADD
+%left <binop> MUL
 %right <node> NOT
 %left <node> PERIOD
 %left <node> RPAREN
@@ -121,7 +122,6 @@ std::vector<std::string> while_start_labels;
 %type <structure> StructType
 %type <m> M WM
 %type <n> N
-
 
 
 %%
@@ -394,7 +394,7 @@ SimpleStatement:    LBRACE {addEmptyScope();} Statements {popScope();} RBRACE
                                                     output::errorMismatch(yylineno);
                                                     exit(0);
                                                 }
-                                                emitStructsEq($1->ID, $3->used_register, tables_stack, getStructTypeEntry(structs_stack, e.struct_type), reg_handler);
+                                                emitStructsEq(e.ID, $3->used_register, tables_stack, getStructTypeEntry(structs_stack, e.struct_type), reg_handler);
                                             } else {
                                                 if(!isLegalExpType($3, varToExp(e.type))){
                                                     output::errorMismatch(yylineno);
@@ -547,7 +547,12 @@ Call:               ID LPAREN {emitSetupFuncCall($1->ID, tables_stack.back(), re
                                                     //call func
                                                     emitFuncCall($1->ID, tables_stack, structs_stack, reg_handler);
 
-                                                    int reg=reg_handler.getAvailableRegister();
+                                                    int reg = -1;
+
+                                                    if(varToExp(func_e.func_type.second) != BOOLEXP){
+                                                        reg = reg_handler.getAvailableRegister();
+                                                    }
+
                                                     $$ = new Expression((varToExp(func_e.func_type.second)),reg);
 
                                                     //save return value
@@ -638,7 +643,7 @@ StructType:         STRUCT ID {
 Exp:                LPAREN Exp RPAREN {
 										$$ = $2;
 									  }
-                    | Exp BINOP Exp {
+                    | Exp MUL Exp {
                                         if(!isNumExp($1) || !isNumExp($3)){
                                             output::errorMismatch(yylineno);
                                             exit(0);
@@ -657,6 +662,20 @@ Exp:                LPAREN Exp RPAREN {
                                              emit(truncByte($$));
                                         }
                                     }
+					| Exp ADD Exp {
+                                        if(!isNumExp($1) || !isNumExp($3)){
+                                            output::errorMismatch(yylineno);
+                                            exit(0);
+                                        }
+                                        $$ = new Expression((operatorType($1, $3)),$1->used_register);
+
+                                        //emit code computing the expression
+                                        emit(operatorString($1, $3, $2->BINOP, reg_handler));
+                                        //if the result should be a byte, mask it with 255
+                                        if(operatorType($1, $3) == BYTEEXP){
+                                             emit(truncByte($$));
+                                        }
+                                    }				
                     | ID {
                             SymEntry e = getSymbolEntry($1->ID, tables_stack);
                             if(!isSymInTable($1->ID, tables_stack) || !e.isVariable()){
@@ -721,7 +740,13 @@ Exp:                LPAREN Exp RPAREN {
                                         delete $1;
                                         delete $3;
                                    }
-                    | Call {$$ = $1;}
+                    | Call {
+                        $$ = $1;
+                        if($$->exp_type == BOOLEXP){
+                            $$->falselist=CodeBuffer::makelist(emit("beq $v0, 0, "));
+                            $$->truelist=CodeBuffer::makelist(emit("j "));
+                        }
+                    }
                     | NUM {
                             $$ = new Expression(INTEXP,reg_handler.getAvailableRegister());
 							emit("li " + regName($$->used_register) + ", " + $1->value);
