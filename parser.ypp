@@ -247,7 +247,7 @@ OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2
 									$$=new Statement();
 									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
 									$$->nextlist=CodeBuffer::merge($4->falselist,$7->nextlist);
-
+									CodeBuffer::instance().bpatch($$->nextlist, CodeBuffer::instance().genLabel());
 								}
                     | IF M1 LPAREN BoolExp RPAREN M ClosedStatement M2 N ELSE M1 M OpenStatement M2
 								{
@@ -256,6 +256,7 @@ OpenStatement:      IF M1 LPAREN BoolExp RPAREN M Statement M2
 									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
 									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist, 
 											$9->nextlist),$13->nextlist);
+									CodeBuffer::instance().bpatch($$->nextlist, CodeBuffer::instance().genLabel());
 								}
                     | WHILE M1 WM LPAREN BoolExp RPAREN M3 M OpenStatement M4 M2 M
 								{
@@ -275,6 +276,7 @@ ClosedStatement:    SimpleStatement
 									CodeBuffer::instance().bpatch($4->truelist,$6->quad);
 									CodeBuffer::instance().bpatch($4->falselist,$12->quad);
 									$$->nextlist = CodeBuffer::merge(CodeBuffer::merge($7->nextlist,$9->nextlist),$13->nextlist);
+									CodeBuffer::instance().bpatch($$->nextlist, CodeBuffer::instance().genLabel());
 								}
                     | WHILE M1 WM LPAREN BoolExp RPAREN M3 M ClosedStatement M4 M2 M
 								{
@@ -559,6 +561,7 @@ ExpList:            Exp {
                                 emitSaveBoolRes($1, $1->used_register);
                             }
 
+                            emitComment("pushing func arguments into stack");
                             //push the expression value
                             pushExp($1, reg_handler, structs_stack);
                             //free the register
@@ -641,7 +644,7 @@ Exp:                LPAREN Exp RPAREN {
 
 							//check if this is a boolean expression
 							if ($$->exp_type==BOOLEXP){
-								$$->falselist=CodeBuffer::makelist(emit("beq " + regName(reg) + ", 0"));
+								$$->falselist=CodeBuffer::makelist(emit("beq " + regName(reg) + ", 0, "));
 								$$->truelist=CodeBuffer::makelist(emit("j "));
 								reg_handler.freeRegister(reg);
 							}
@@ -676,7 +679,7 @@ Exp:                LPAREN Exp RPAREN {
 
                                         //check if this is a boolean expression
                                         if ($$->exp_type==BOOLEXP){
-                                            $$->falselist=CodeBuffer::makelist(emit("beq " + regName(reg) + ", 0"));
+                                            $$->falselist=CodeBuffer::makelist(emit("beq " + regName(reg) + ", 0, "));
                                             $$->truelist=CodeBuffer::makelist(emit("j "));
                                             reg_handler.freeRegister(reg);
                                             reg = -1;
@@ -792,7 +795,7 @@ M:					/*epsilon*/
 N:					/*epsilon*/
 						{
 							$$ = new N();
-							$$->nextlist=CodeBuffer::makelist(CodeBuffer::instance().emit("j "));
+							$$->nextlist=CodeBuffer::makelist(emit("j "));
 						}
 
 ;
@@ -828,6 +831,8 @@ int main(){
 
     addPrints();
     yyparse();
+
+    emit("");
 
     CodeBuffer::instance().printDataBuffer();
     CodeBuffer::instance().printCodeBuffer();

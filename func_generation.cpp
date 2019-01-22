@@ -90,7 +90,7 @@ int emitSaveVar(int reg_num, int offset) {
 }
 
 int emitLoadVar(int reg_num, std::string &ID, SymTable &table) {
-    emitComment("load the variable " + ID + "into the register " + regName(reg_num));
+    emitComment("load the variable " + ID + " into the register " + regName(reg_num));
 
     //in case of a struct, load it's loction in the stack
     if(table.getSymbolEntry(ID).type == STRUCTTYPE){
