@@ -44,7 +44,7 @@ int emitSetupFuncCall(std::string func_name, SymTable &table, regHandler &r) {
 
 int updateSPBeforeCall(std::string func_name, SymTable &table) {
     emitComment("update $sp according to the symbol table");
-    return emit("addu $sp, $fp, (" + numToString(-table.nextOffset()) + ")");
+    return emit("addu $sp, $fp, " + numToString(-table.nextOffset()));
 }
 
 int emitSaveRegisters(regHandler &r) {
@@ -147,10 +147,11 @@ int emitStructsEq(std::string &struct1, int reg2, SymTable &table, StructType t,
 
 int emitFuncCall(std::string func_name, SymTable &table, std::vector<std::vector<StructType> > &structs_stack,
                  regHandler &r) {
-    //move frame pointer to new location
-    int first_command = emit("move $fp, $sp");
     //add place in stack so that the usage of the symbol table's offsets will be correct
-    addPlaceInStack();
+    int first_command = addPlaceInStack();
+    //move frame pointer to new location
+    emit("move $fp, $sp");
+
     //call func
     emit("jal " + func_name);
     //remove all func arguments from the stack
