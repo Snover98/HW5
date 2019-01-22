@@ -819,7 +819,6 @@ M4:                 {
 %%
 
 int main(){
-    emit("j main");
     reg_handler = regHandler();
     div_by_zero_label = emitDivByZeroHandler();
 
@@ -862,7 +861,7 @@ void addPrints(){
     tables_stack.back().addEntry("print", print_func_params, NOTYPE);
     //emit code for print
     emitFuncStart("print");
-    emit("lw $a0,0($sp)");
+    emit("lw $a0,4($fp)");
     emit("li $v0,4");
     emit("syscall");
     emit("jr $ra");
@@ -871,7 +870,7 @@ void addPrints(){
     tables_stack.back().addEntry("printi", printi_func_params, NOTYPE);
     //emit code for printi
     emitFuncStart("printi");
-    emit("lw $a0,0($sp)");
+    emit("lw $a0,4($fp)");
     emit("li $v0,1");
     emit("syscall");
     emit("jr $ra");

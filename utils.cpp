@@ -31,7 +31,7 @@ int emit(std::stringstream &str) {
 int addPlaceInStack(int offset) {
     //convert offset to bytes
     offset *= 4;
-    return emit("addu $sp, $sp, " + numToString(offset));
+    return emit("addu $sp, $sp, " + numToString(-offset));
 }
 
 int removePlaceInStack(int offset) {

@@ -10,7 +10,13 @@ int emitFuncStart(std::string func_name) {
     emitComment("CODE OF FUNCTION " + func_name);
     emit(".globl " + func_name);
     emit(".ent " + func_name);
-    return emit(func_name + ":");
+    int first_command = emit(func_name + ":");
+
+    if(func_name == "main"){
+        emit("move $fp, $sp");
+    }
+
+    return first_command;
 }
 
 int emitFuncEnd(std::string func_name) {
@@ -148,6 +154,7 @@ int emitStructsEq(std::string &struct1, int reg2, SymTable &table, StructType t,
 int emitFuncCall(std::string func_name, SymTable &table, std::vector<std::vector<StructType> > &structs_stack,
                  regHandler &r) {
     //add place in stack so that the usage of the symbol table's offsets will be correct
+    emitComment("calling func " + func_name);
     int first_command = addPlaceInStack();
     //move frame pointer to new location
     emit("move $fp, $sp");
@@ -155,7 +162,7 @@ int emitFuncCall(std::string func_name, SymTable &table, std::vector<std::vector
     //call func
     emit("jal " + func_name);
     //remove all func arguments from the stack
-    removePlaceInStack(funcArgsTotOffset(table.getSymbolEntry(func_name).func_type.first, table, structs_stack) + 1);
+    removePlaceInStack(funcArgsTotOffset(table.getSymbolEntry(func_name).func_type.first, table, structs_stack)+1);
 
     //pop $ra and $fp
     emit("lw $ra, ($sp)");
