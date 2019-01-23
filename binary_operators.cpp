@@ -10,7 +10,7 @@ std::string operatorCommand(std::string &op) {
     } else if (op == "/") {
         return "divu";
     } else if (op == "*") {
-        return "mulou";
+        return "mul";
     } else if (op == "-") {
         return "subu";
     }
