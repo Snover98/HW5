@@ -27,7 +27,6 @@ set(SOURCE_FILES
         comparison_operators.cpp
         func_generation.cpp
         func_generation.h
-        parser_code.cpp
-        parser_code.h)
+        )
 
 add_executable(HW5 ${SOURCE_FILES})

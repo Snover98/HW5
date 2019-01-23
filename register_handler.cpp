@@ -21,7 +21,6 @@ int regHandler::getAvailableRegister() {
 void regHandler::freeRegister(int i) {
     if (i < 0 || i >= NUM_OF_REGISTERS) {
         //note: not suppose to get here
-//        std::cout << "ERROR" << std::endl;
         return;
     }
     available_registers[i] = false;
