@@ -4,7 +4,7 @@
 
 #include "SymTable.h"
 
-#define CALCOFFSET() scope_entries.empty() ? table_offset : scope_entries.back().offset + typeOffset(scope_entries.back())
+#define CALCOFFSET() scope_entries.empty() ? table_offset : std::max(scope_entries.back().offset + typeOffset(scope_entries.back()), table_offset)
 
 int SymTable::typeOffset(SymEntry& entry) {
     int offset = 0;
